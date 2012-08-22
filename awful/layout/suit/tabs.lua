@@ -54,11 +54,11 @@ function arrange(p)
             end
         end
 
-		for k = 1, #cls do
-			if (k ~= fidx) then
-				cls[k]:geometry(geometry)
-			end
-		end
+        for k = 1, #cls do
+            if (k ~= fidx) then
+                cls[k]:geometry(geometry)
+            end
+        end
     end
 end
 

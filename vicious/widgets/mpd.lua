@@ -26,8 +26,8 @@ local function worker(format, warg)
         ["{random}"]  = "N/A",
 --        ["{Album}"]  = "N/A",
 --        ["{Genre}"]  = "N/A",
-		["{Name}"] = "N/A",
-		["{file}"] = "N/A",
+        ["{Name}"] = "N/A",
+        ["{file}"] = "N/A",
     }
 
     -- Fallback to MPD defaults
@@ -51,8 +51,8 @@ local function worker(format, warg)
             elseif k == "random" then mpd_state["{"..k.."}"] = v and tonumber(v)
 --            elseif k == "Album"  then mpd_state["{"..k.."}"] = helpers.escape(v)
 --            elseif k == "Genre"  then mpd_state["{"..k.."}"] = helpers.escape(v)
-			elseif k == "Name" then mpd_state["{"..k.."}"] = helpers.escape(v)
-			elseif k == "file" then mpd_state["{"..k.."}"] = helpers.escape(v)
+            elseif k == "Name" then mpd_state["{"..k.."}"] = helpers.escape(v)
+            elseif k == "file" then mpd_state["{"..k.."}"] = helpers.escape(v)
             end
         end
     end

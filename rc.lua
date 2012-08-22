@@ -834,7 +834,8 @@ globalkeys = awful.util.table.join(
         awful.util.getdir("cache") .. "/translate")
     end),
 
-    awful.key({ modkey }, "g", add_weather)
+    awful.key({ modkey }, "g", add_weather),
+    awful.key({ modkey }, "y", add_deluge)
 
 )
 -- }}}

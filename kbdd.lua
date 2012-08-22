@@ -40,12 +40,12 @@ awful.widget.layout.margins[kbdwidget] = { left = 0, right = 7 }
 dbus.request_name("session", "ru.gentoo.kbdd")
 dbus.add_match("session", "interface='ru.gentoo.kbdd',member='layoutChanged'")
 dbus.add_signal("ru.gentoo.kbdd", function(...)
-	local data = {...}
-	local layout = data[2]
-	local lts = {[0] = "Eng", [1] = "Рус"}
-	local lts_img = {[0] = kbd_img_path.us, [1] = kbd_img_path.ru,}
+    local data = {...}
+    local layout = data[2]
+    local lts = {[0] = "Eng", [1] = "Рус"}
+    local lts_img = {[0] = kbd_img_path.us, [1] = kbd_img_path.ru,}
 --    kbdwidget.text = "<b>"..lts[layout].."</b>"
-	kbdwidget.bg_image = image(lts_img[layout])
-	end)
+    kbdwidget.bg_image = image(lts_img[layout])
+    end)
 -- }}}
 
