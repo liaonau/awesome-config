@@ -6,6 +6,5 @@ require("awful.layout.suit.magnifier")
 require("awful.layout.suit.spiral")
 require("awful.layout.suit.tabs")
 
-require("awful.layout.suit.static")
 --- Suits for awful
 module("awful.layout.suit")

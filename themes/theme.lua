@@ -85,10 +85,12 @@ theme.wibox_net_down = config .. wibox .. "down.png"
 theme.wibox_thermal = config .. wibox .. "temp.png"
 theme.wibox_bat = config .. wibox .. "bat.png"
 theme.wibox_volume = config .. wibox .. "vol.png"
+theme.wibox_novolume = config .. wibox .. "volmute.png"
 theme.wibox_date = config .. wibox .. "time.png"
 theme.wibox_deluge = config .. wibox .. "deluge.png"
 theme.wibox_mem = config .. wibox .. "mem.png"
 theme.wibox_weather = config .. wibox .. "weather/cloud.png"
+theme.kbdd = {ru = config .. "kbdd/ru.png", us = config .. "kbdd/us.png"}
 
 -- You can use your own command to set your wallpaper
 theme.wallpaper_cmd = { "awsetbg "..config.."wallpaper/vladstudio-1.jpg" }

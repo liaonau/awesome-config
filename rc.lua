@@ -1,4 +1,4 @@
---{{{ imports
+-- {{{ Variable definitions, imports
 os.setlocale("ru_RU.UTF8")
 require("awful")
 require("awful.autofocus")
@@ -17,14 +17,14 @@ require('freedesktop.desktop')
 -- погода
 require("weather")
 
-require("aweror")
 require("shifty")
---}}}
 
--- {{{ Variable definitions
 -- Themes define colours, icons, and wallpapers
 --beautiful.init("/usr/share/awesome/themes/default/theme.lua")
 beautiful.init(awful.util.getdir("config") .. "/themes/theme.lua")
+
+-- раскладка
+require("kbdd")
 
 -- This is used later as the default terminal and editor to run.
 terminal = "urxvt"
@@ -67,11 +67,11 @@ shifty.config.tags = {
 	["1"] = {	position = 1, icon = tags_iconsdir.."terminal.png",
 				init = true, exclusive = false, layout = als.tabs,
 			},
-	["2"] = {	position = 2, icon = tags_iconsdir.."browser.png",
-				spawn = "browser",
+	["2"] = {	position = 2, icon = tags_iconsdir.."ff.png",
+				spawn = "firefox",
 			},
-	["3"] = {	position = 3, icon = tags_iconsdir.."gvim.png",
-				spawn = "gvim --servername GVIM",
+	["3"] = {	position = 3, icon = tags_iconsdir.."im.png",
+				spawn = "pidgin",
 			},
 	["4"] = {	position = 4, icon = tags_iconsdir.."mplayer.png",
 				spawn = "urxvt -name mplayer_term", layout = als.tabs,
@@ -79,28 +79,48 @@ shifty.config.tags = {
 	["5"] = {	position = 5, icon = tags_iconsdir.."deluge.png",
 				spawn = "deluge-gtk",
 			},
-	["6"] = {	position = 6, icon = tags_iconsdir.."skype.png",
-				spawn = "skype",
+	["6"] = {	position = 6, icon = tags_iconsdir.."gvim.png",
+				spawn = "gvim --servername GVIM",
 			},
-	["7"] = {	position = 7, icon = tags_iconsdir.."audio.png",
-				exclusive = false, spawn = "urxvt -name ncmpcTerm -e ncmpc",
+	["7"] = {	position = 7, icon = tags_iconsdir.."dict.png",
+				spawn = "stardict",
 			},
 	["8"] = {	position = 8, icon = tags_iconsdir.."geeqie.png", },
-	["9"] = {	position = 9, icon = tags_iconsdir.."fbreader.png", },
+	["9"] = {	position = 9, icon = tags_iconsdir.."evince.png", },
+   ["10"] = {	position = 10,icon = tags_iconsdir.."fbreader.png",
+				spawn = "fbreader",
+			},
+ ["wine"] = {   position = 11, icon = tags_iconsdir.."wine.png", },
+   ["lk"] = {   position = 12, icon = tags_iconsdir.."browser.png",
+                spawn = "browser",
+            },
+ ["htop"] = {   position = 13, icon = tags_iconsdir.."htop.png", 
+                spawn = "urxvt -name htopTerm -e htop",
+            },
+  ["mpd"] = {   position = 14, icon = tags_iconsdir.."audio.png",
+				spawn = "urxvt -name ncmpcTerm -e ncmpc",
+			},
 }
 
 shifty.config.apps = {
-	{ match = {"urxvt"							}, tag		= "1",	},
-	{ match = {"^[Ll]uakit"						}, tag		= "2",	},
-	{ match = {"^[Gg]vim$"						}, tag		= "3",	},
-	{ match = {"^[Mm][Pp]layer"					}, tag		= "4",	},
-	{ match = {"Deluge"							}, tag		= "5",	},
-	{ match = {"[Ss]kype", "[Xx]chat"			}, tag		= "6",	},
-	{ match = {"ncmpcTerm"						}, tag		= "7",	},
-	{ match = {"geeqie", "[Gg]imp"				}, tag		= "8",	},
-	{ match = {"gimp%-image%-window"			}, slave	= true,	},
-	{ match = {"[Ff][Bb]reader", "[Ee]vince"	}, tag		= "9",	},
-	{ match = {"htopTerm"						}, tag		= "htop",},
+--    { match = {["type"] = "dialog"		}, ontop	= true,	},
+    { match = {"urxvt"				}, tag		= "1",	},
+	{ match = {"[Ff]irefox"			}, tag		= "2",  },
+	{ match = {"[Ss]kype", "[Xx]chat", "[Pp]idgin"		}, tag		= "3",	},
+	{ match = {"^conversation$"		}, nopopup	= true,	},
+	{ match = {"^[Mm][Pp]layer", "[Vv]lc"               }, tag		= "4",	},
+	{ match = {"Deluge"				}, tag		= "5",	},
+	{ match = {"^[Gg]vim$"			}, tag		= "6",	},
+	{ match = {"^[Ss]tardict$"		}, tag		= "7",	},
+	{ match = {"geeqie", "[Gg]imp"	}, tag		= "8",	},
+	{ match = {"gimp%-image%-window"}, slave	= true,	},
+	{ match = {"[Ee]vince"			}, tag		= "9",	},
+	{ match = {"[Ff][Bb]reader"		}, tag		= "10",	},
+	{ match = {"^[Ll]uakit"			}, tag		= "lk",	},
+--    { match = {"[Pp]lugin-container"}, tag		= "ff", float = true, fullscreen = true, },
+	{ match = {"htopTerm"			}, tag		= "htop",},
+	{ match = {"ncmpcTerm"			}, tag		= "mpd",},
+	{ match = {"[Ww]ine"			}, tag		= "wine",},
 	{ match = { "" },  honorsizehints=false },
 }
 
@@ -114,7 +134,7 @@ freedesktop.utils.icon_theme	= 'gnome'	-- look inside /usr/share/icons/, default
 menu_items = freedesktop.menu.new()
 myawesomemenu = {
 	{ "manual",		terminal .. " -e man awesome", freedesktop.utils.lookup_icon({ icon = 'help' }) },
-	{ "edit config",editor_cmd .. " " .. awful.util.getdir("config") .. "/rc.lua", freedesktop.utils.lookup_icon({ icon = 'package_settings' }) },
+	{ "edit config",editor_cmd .. " " .. awesome.conffile, freedesktop.utils.lookup_icon({ icon = 'package_settings' }) },
 	{ "restart",	awesome.restart,	freedesktop.utils.lookup_icon({ icon = 'gtk-refresh' }) },
 	{ "quit",		awesome.quit,		freedesktop.utils.lookup_icon({ icon = 'gtk-quit' }) },
 }
@@ -259,6 +279,7 @@ mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon, menu = myma
 			deluge_status_text = string.gsub(deluge_status_text, "\n(Unlnown)\n", "\n<span fgcolor='#ff8888'>%1</span>\n")
 			deluge_status_text = string.gsub(deluge_status_text, "(ETA:)([^\n]+)\n", "%1<span fgcolor='#ff8888'>%2</span>\n")
 			deluge_status_text = string.gsub(deluge_status_text, " (%d+.%d*%%)", " <span fgcolor='#88ffff'>%1</span>")
+			deluge_status_text = string.gsub(deluge_status_text, "&", "&amp;")
 			deluge_status = naughty.notify({
 				text = string.format( "<span font_desc='monospace 10'>%s</span>", deluge_status_text ),
 				title='deluge',
@@ -302,7 +323,7 @@ mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon, menu = myma
 				'температура:   '..gm['temperature']..'°\n'..
 				'ощущается как: '..gm['heat']..'°\n'..
 				'ветер:         '..gm['wind']..' м/с\n'..
-				'давление:      '..gm['pressure']..' мм.рт.ст\n\n'
+				'давление:      '..gm['pressure']..' мм.рт.ст.\n\n'
 			end
 			weather_status = naughty.notify({
 				text = string.format( "<span font_desc='monospace 12'>%s</span>", text_weather ),
@@ -418,15 +439,29 @@ mytasklist.buttons = awful.util.table.join(
 	myvolume_icon.image = image(beautiful.wibox_volume)
 
 	myvolume = widget({ type = "textbox" })
-	vicious.register(myvolume, vicious.widgets.volume, '<span fgcolor="#8888ff">'.."$1%"..'</span>', 10, "Master")
+	vicious.register(myvolume, vicious.widgets.volume,
+            function(widget, args)
+                if (args.mute) then
+                    myvolume_icon.image = image(beautiful.wibox_novolume)
+                    return ''
+                else
+                    myvolume_icon.image = image(beautiful.wibox_volume)
+                    return '<span fgcolor="#8888ff">'..args.volume..'%</span>'
+                end
+            end,
+            10, "Master")
 
 	local volume_control = awful.util.table.join(
+		awful.button({ }, 1, function()
+			os.execute('amixer -c 0 -- sset Master toggle')
+			vicious.force({myvolume})
+		end),
 		awful.button({ }, 4, function()
-			awful.util.spawn("aumix -v +4")
+                        os.execute('amixer -c 0 -- sset Master 3%+')
 			vicious.force({myvolume})
 		end),
 		awful.button({ }, 5, function()
-			awful.util.spawn("aumix -v -4")
+                        os.execute('amixer -c 0 -- sset Master 3%-')
 			vicious.force({myvolume})
 		end)
 	)
@@ -515,25 +550,36 @@ mytasklist.buttons = awful.util.table.join(
 		elseif args["{state}"] == "Pause" then
 			return '<span fgcolor="#00bbbb">paused</span>'
 		else
-			return	'<span fgcolor="#00bbbb">'..args["{Artist}"]..'</span>'..' '..
-					'<span fgcolor="'..color_title..'">'..args["{Title}"]..'</span>'
+			local artist, title, name, file = args["{Artist}"], args["{Title}"], args["{Name}"], args["{file}"]
+			if (name == 'N/A')   then name = nil            end
+			if (artist == 'N/A') then artist = ''           end
+			if (title == 'N/A')  then title  = name or string.gsub(file, ".*/([^/]*)", "%1") end
+			if (file:match('^http://')) then
+				local f  = io.popen("echo '"..title.."'|iconv -t LATIN1|iconv -f CP1251")
+				local tc = f:read("*a")
+				f:close()
+				artist = 'radio'
+				title = tc or title
+			end
+			return	'<span fgcolor="#00bbbb">'..artist..'</span>'..' '..
+					'<span fgcolor="'..color_title..'">'..title..'</span>'
 		end
     end, 10)
 	local mpd_control = awful.util.table.join(
 		awful.button({ }, 1, function()
-			awful.util.spawn("mpc toggle")
+			os.execute("mpc toggle")
 			vicious.force({mympd})
 		end),
 		awful.button({ }, 3, function()
-			awful.util.spawn("mpc random")
+			os.execute("mpc random")
 			vicious.force({mympd})
 		end),
 		awful.button({ }, 4, function()
-			awful.util.spawn("mpc prev")
+			os.execute("mpc prev")
 			vicious.force({mympd})
 		end),
 		awful.button({ }, 5, function()
-			awful.util.spawn("mpc next")
+			os.execute("mpc next")
 			vicious.force({mympd})
 		end)
 	)
@@ -579,7 +625,7 @@ mytasklist.buttons = awful.util.table.join(
 
 	local deluge_control = awful.util.table.join(
 		awful.button({ }, 1, function() add_deluge() end),
---        awful.button({ }, 2, function() awful.util.spawn("delugecontrol -c") vicious.force({mydeluge}) end),
+		awful.button({ }, 2, function() os.execute("delugecontrol -c") vicious.force({mydeluge}) end),
 		awful.button({ }, 3, function() remove_check_deluge() awful.util.spawn("deluge-gtk") end)
 	)
 	mydeluge:buttons(deluge_control)
@@ -599,7 +645,7 @@ for s = 1, screen.count() do
 	mytaglist[s] = awful.widget.taglist(s, awful.widget.taglist.label.all, mytaglist.buttons)
 	mytasklist[s] = awful.widget.tasklist(
 		function(c) return awful.widget.tasklist.label.currenttags(c, s) end,
-		mytasklist.buttons
+        mytasklist.buttons
 	)
 --}}}
 
@@ -618,6 +664,7 @@ for s = 1, screen.count() do
 				s == 1 and mysystray or nil,
 				separator, mydate, mydate_icon,
 				separator, myvolume, myvolume_icon,
+                separator, kbdwidget,
 				separator, mydeluge, mydeluge_icon,
 				separator, mybat, mybat_icon,
 				separator, mythermal, mythermal_icon,
@@ -629,11 +676,11 @@ for s = 1, screen.count() do
 		},
 		{	-- низ
 			{	-- низ слева
-				layout = awful.widget.layout.horizontal.leftright,
+                layout = awful.widget.layout.horizontal.leftright,
 			},
 			{	-- низ справа
-				mytasklist[s],
-				layout = awful.widget.layout.horizontal.rightleft,
+                mytasklist[s],
+                layout = awful.widget.layout.horizontal.leftright,
 			},
 		},
 	layout = awful.widget.layout.vertical.flex,
@@ -650,17 +697,17 @@ root.buttons(awful.util.table.join(
 ))
 -- }}}
 
--- {{{ keys
+-- {{{ globalkeys
 globalkeys = awful.util.table.join(
-	awful.key({ modkey }, "s", function () mywibox[mouse.screen].visible = not mywibox[mouse.screen].visible end),
+    awful.key({ modkey }, "s", function () mywibox[mouse.screen].visible = not mywibox[mouse.screen].visible end),
 
-	awful.key({ }, "XF86Launch2",	add_sdcv	),
-	awful.key({ }, "XF86HomePage",	add_weather	),
-	awful.key({ }, "XF86Mail",		add_deluge	),
+--    awful.key({ }, "XF86Launch2",	add_sdcv	),
+--    awful.key({ }, "XF86HomePage",	add_weather	),
+--    awful.key({ }, "XF86Mail",		add_deluge	),
 
 	awful.key({ }, "Print", nil),
 
-	awful.key({modkey, "Shift"},     "w",      function() add_weather() end),
+	awful.key({modkey, "Control"  }, "k",      function() awful.util.spawn("xkill") end),
 
 	awful.key({ modkey,           }, "Left",   awful.tag.viewprev       ),
 	awful.key({ modkey,           }, "Right",  awful.tag.viewnext       ),
@@ -679,7 +726,7 @@ globalkeys = awful.util.table.join(
 			awful.client.focus.byidx(-1)
 			if client.focus then client.focus:raise() end
 		end),
-	awful.key({ modkey,           }, "Escape", function () mymainmenu:show({keygrabber=true}) end),
+        awful.key({ modkey,           }, "Escape", function () mymainmenu:show({keygrabber=true}) end),
 
 	-- Layout manipulation
 	awful.key({ modkey, "Shift"   }, ".", function () awful.client.swap.byidx(  1)    end),
@@ -719,10 +766,16 @@ globalkeys = awful.util.table.join(
 			end
 		end),
 
-	awful.key({ modkey, "Control"   }, "n", awful.client.restore),
+	awful.key({ modkey, "Control" }, "n", awful.client.restore),
 
 	-- Prompt
-	awful.key({ modkey },            "r",     function () mypromptbox[mouse.screen]:run() end),
+	awful.key({ modkey }, "r",
+		function ()
+			awful.prompt.run({ prompt = "Run: " },
+			mypromptbox[mouse.screen].widget,
+			awful.util.spawn, awful.completion.shell,
+			awful.util.getdir("cache") .. "/history")
+		end),
 
 	awful.key({ modkey }, "x",
 		function ()
@@ -738,12 +791,13 @@ globalkeys = awful.util.table.join(
 			mypromptbox[mouse.screen].widget,
 			function (expr)
 				add_sdcv(expr)
-			end,
-			nil, awful.util.getdir("cache") .. "/translate")
+			end, nil,
+			awful.util.getdir("cache") .. "/translate")
 		end)
-
 )
+-- }}}
 
+-- {{{ clientkeys
 clientkeys = awful.util.table.join(
 	awful.key({ modkey,           }, "f",      function (c) c.fullscreen = not c.fullscreen  end),
 	awful.key({ modkey,           }, "d",      function (c) c:kill()                         end),
@@ -764,41 +818,49 @@ clientkeys = awful.util.table.join(
 			c.maximized_vertical   = not c.maximized_vertical
 		end)
 )
+-- }}}
 
-for i=1,9 do
+-- {{{ tag_keys
+local function tags_keys(i, p)
 	globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey }, i,
 		function ()
-			local t = awful.tag.viewonly(shifty.getpos(i))
+			local t = awful.tag.viewonly(shifty.getpos(p))
 		end))
 	globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey, "Control" }, i,
 		function ()
-			local t = shifty.getpos(i)
+			local t = shifty.getpos(p)
 			t.selected = not t.selected
 		end))
 	globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey, "Control", "Shift" }, i,
 		function ()
 			if client.focus then
-				awful.client.toggletag(shifty.getpos(i))
+				awful.client.toggletag(shifty.getpos(p))
 			end
 		end))
 	-- move clients to other tags
 	globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey, "Shift" }, i,
 		function ()
 			if client.focus then
-				local t = shifty.getpos(i)
+				local t = shifty.getpos(p)
 				awful.client.movetotag(t)
 				awful.tag.viewonly(t)
 			end
 		end))
 end
+for i=1,9 do
+	tags_keys(i, i)
+end
+tags_keys(0, 10)
+tags_keys("b", 12)
+tags_keys("i", 13)
+tags_keys("z", 14)
+-- }}}
 
+-- {{{ clientbuttons, set keys
 clientbuttons = awful.util.table.join(
 	awful.button({ }, 1, function (c) client.focus = c; c:raise() end),
 	awful.button({ modkey }, 1, awful.mouse.client.move),
 	awful.button({ modkey }, 3, awful.mouse.client.resize))
-
--- aweror
-globalkeys = awful.util.table.join(globalkeys, aweror.genkeys(modkey))
 
 -- Set keys
 root.keys(globalkeys)
@@ -820,4 +882,5 @@ awful.rules.rules = {
 
 -- {{{ Signals
 -- }}}
+
 -- vim: foldmethod=marker:filetype=lua
