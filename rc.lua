@@ -120,7 +120,7 @@ shifty.config.tags = {
 }
 
 shifty.config.apps = {
-    { match = {["type"] = "dialog"  }, ontop    = true, },
+    { match = {["type"] = {"dialog"}}, ontop    = true, },
     { match = {"urxvt"              }, tag      = "1",  },
     { match = {"[Ff]irefox"         }, tag      = "2",  },
     { match = {"[Ss]kype", "[Xx]chat", "[Pp]idgin"      }, tag  = "3",  },
@@ -134,7 +134,6 @@ shifty.config.apps = {
     { match = {"[Ee]vince"          }, tag      = "9",  },
     { match = {"[Ff][Bb]reader"     }, tag      = "10", },
     { match = {"^[Ll]uakit"         }, tag      = "lk", },
---    { match = {"[Pp]lugin-container"}, tag      = "ff", float = true, fullscreen = true, },
     { match = {"htopTerm"           }, tag      = "htop",   },
     { match = {"ncmpcTerm"          }, tag      = "mpd",    },
     { match = {"[Ww]ine"            }, tag      = "wine",   },
