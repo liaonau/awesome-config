@@ -102,6 +102,22 @@ local function humanize(forecast)
 		elseif	(fc['tod'] == '2') then time['day'] = 'день'
 		elseif	(fc['tod'] == '3') then time['day'] = 'вечер'
 		end
+        local month = (function(n)
+            if n == "01" then return "января"     end
+            if n == "02" then return "февряля"    end
+            if n == "03" then return "марта"      end
+            if n == "04" then return "апреля"     end
+            if n == "05" then return "мая"        end
+            if n == "06" then return "июня"       end
+            if n == "07" then return "июль"       end
+            if n == "08" then return "августа"    end
+            if n == "09" then return "сентября"   end
+            if n == "10" then return "октября"    end
+            if n == "11" then return "ноября"     end
+            if n == "12" then return "декабря"    end
+            return "нулябрь"
+        end)(forecast[1].month)
+        weather.date = forecast[1].day .. " " .. month .. " " .. forecast[1].year
 		weather[c] = time
 	end
 	return weather

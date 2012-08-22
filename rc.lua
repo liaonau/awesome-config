@@ -194,7 +194,7 @@ function add_sdcv(expr)
         sdcv = naughty.notify({
             text = string.format( "<span font_desc='monospace 12'>%s</span>", sdcv_word ),
             title='перевод',
-            timeout=0,
+            timeout=10,
         })
     end
 end
@@ -221,6 +221,10 @@ function add_calendar(inc_offset)
     datespec = datespec.year * 12 + datespec.month - 1 + calendar_offset
     datespec = (datespec % 12 + 1) .. " " .. math.floor(datespec / 12)
     local cal = string.gsub(awful.util.pread("cal -m "..datespec), "^%s*(.-)%s*$", "%1")
+    local day = os.date("%d")
+    if (calendar_offset == 0) then
+        cal = string.gsub(cal, day, "<span fgcolor='#6666ff'>"..day.."</span>")
+    end
     calendar = naughty.notify({
         text = string.format( "<span font_desc='monospace 12'>%s</span>", cal ),
         title='календарь',
@@ -343,7 +347,7 @@ function add_weather()
         end
         weather_status = naughty.notify({
             text = string.format( "<span font_desc='monospace 12'>%s</span>", text_weather ),
-            title='погода',
+            title='погода ' .. gw.date,
             icon=icon_weather,
             timeout=0,
         })
@@ -828,7 +832,10 @@ globalkeys = awful.util.table.join(
             add_sdcv(expr)
         end, nil,
         awful.util.getdir("cache") .. "/translate")
-    end)
+    end),
+
+    awful.key({ modkey }, "g", add_weather)
+
 )
 -- }}}
 
