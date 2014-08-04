@@ -19,13 +19,13 @@ module("vicious.widgets.mpd")
 -- {{{ MPD widget type
 local function worker(format, warg)
     local mpd_state  = {
---        ["{volume}"] = 0,
+        ["{volume}"] = 0,
         ["{state}"]  = "N/A",
         ["{Artist}"] = "N/A",
         ["{Title}"]  = "N/A",
         ["{random}"]  = "N/A",
---        ["{Album}"]  = "N/A",
---        ["{Genre}"]  = "N/A",
+        ["{Album}"]  = "N/A",
+        ["{Genre}"]  = "N/A",
         ["{Name}"] = "N/A",
         ["{file}"] = "N/A",
     }
@@ -45,12 +45,12 @@ local function worker(format, warg)
     for line in f:lines() do
         for k, v in string.gmatch(line, "([%w]+):[%s](.*)$") do
             if     k == "state"  then mpd_state["{"..k.."}"] = helpers.capitalize(v)
---            elseif k == "volume" then mpd_state["{"..k.."}"] = v and tonumber(v)
+            elseif k == "volume" then mpd_state["{"..k.."}"] = v and tonumber(v)
             elseif k == "Artist" then mpd_state["{"..k.."}"] = helpers.escape(v)
             elseif k == "Title"  then mpd_state["{"..k.."}"] = helpers.escape(v)
             elseif k == "random" then mpd_state["{"..k.."}"] = v and tonumber(v)
---            elseif k == "Album"  then mpd_state["{"..k.."}"] = helpers.escape(v)
---            elseif k == "Genre"  then mpd_state["{"..k.."}"] = helpers.escape(v)
+            elseif k == "Album"  then mpd_state["{"..k.."}"] = helpers.escape(v)
+            elseif k == "Genre"  then mpd_state["{"..k.."}"] = helpers.escape(v)
             elseif k == "Name" then mpd_state["{"..k.."}"] = helpers.escape(v)
             elseif k == "file" then mpd_state["{"..k.."}"] = helpers.escape(v)
             end

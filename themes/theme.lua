@@ -3,8 +3,16 @@
 ---------------------------
 
 theme   = {}
-config  = awful.util.getdir("config").."/themes/"
-wibox   = 'wibox/'
+
+local awful = require("awful")
+
+local setmetatable = setmetatable
+local type = type
+local rawset = rawset
+local path = awful.util.getdir("config").."/themes/"
+local wb   = path..'wibox/'
+
+theme.main_wibox_height = "38"
 
 theme.font          = "Bitstream Vera sans 10"
 
@@ -23,7 +31,6 @@ theme.border_normal = "#000000"
 theme.border_focus  = "#535d6c"
 theme.border_marked = "#91231c"
 
---theme.taglist_bg_focus = "#333388"
 theme.taglist_bg_focus = "#338833"
 
 -- There are other variable sets
@@ -37,15 +44,15 @@ theme.taglist_bg_focus = "#338833"
 --theme.taglist_bg_focus = "#ff0000"
 
 -- Display the taglist squares
-theme.taglist_squares_sel   = config .. "taglist/squarefw.png"
-theme.taglist_squares_unsel = config .. "taglist/squarew.png"
+theme.taglist_squares_sel   = path.."taglist/squarefw.png"
+theme.taglist_squares_unsel = path.."taglist/squarew.png"
 
-theme.tasklist_floating_icon = config .. "tasklist/floatingw.png"
+theme.tasklist_floating_icon = path.."tasklist/floatingw.png"
 
 -- Variables set for theming the menu:
 -- menu_[bg|fg]_[normal|focus]
 -- menu_[border_color|border_width]
-theme.menu_submenu_icon = config .. "submenu.png"
+theme.menu_submenu_icon = path.."submenu.png"
 theme.menu_height       = "15"
 theme.menu_width        = "100"
 
@@ -55,66 +62,128 @@ theme.menu_width        = "100"
 --theme.bg_widget = "#cc0000"
 
 -- Define the image to load
-theme.titlebar_close_button_normal = config .. "titlebar/close_normal.png"
-theme.titlebar_close_button_focus  = config .. "titlebar/close_focus.png"
+theme.titlebar_close_button_normal = path.."titlebar/close_normal.png"
+theme.titlebar_close_button_focus  = path.."titlebar/close_focus.png"
 
-theme.titlebar_ontop_button_normal_inactive     = config .. "titlebar/ontop_normal_inactive.png"
-theme.titlebar_ontop_button_focus_inactive      = config .. "titlebar/ontop_focus_inactive.png"
-theme.titlebar_ontop_button_normal_active       = config .. "titlebar/ontop_normal_active.png"
-theme.titlebar_ontop_button_focus_active        = config .. "titlebar/ontop_focus_active.png"
+theme.titlebar_ontop_button_normal_inactive     = path.."titlebar/ontop_normal_inactive.png"
+theme.titlebar_ontop_button_focus_inactive      = path.."titlebar/ontop_focus_inactive.png"
+theme.titlebar_ontop_button_normal_active       = path.."titlebar/ontop_normal_active.png"
+theme.titlebar_ontop_button_focus_active        = path.."titlebar/ontop_focus_active.png"
 
-theme.titlebar_sticky_button_normal_inactive    = config .. "titlebar/sticky_normal_inactive.png"
-theme.titlebar_sticky_button_focus_inactive     = config .. "titlebar/sticky_focus_inactive.png"
-theme.titlebar_sticky_button_normal_active      = config .. "titlebar/sticky_normal_active.png"
-theme.titlebar_sticky_button_focus_active       = config .. "titlebar/sticky_focus_active.png"
+theme.titlebar_sticky_button_normal_inactive    = path.."titlebar/sticky_normal_inactive.png"
+theme.titlebar_sticky_button_focus_inactive     = path.."titlebar/sticky_focus_inactive.png"
+theme.titlebar_sticky_button_normal_active      = path.."titlebar/sticky_normal_active.png"
+theme.titlebar_sticky_button_focus_active       = path.."titlebar/sticky_focus_active.png"
 
-theme.titlebar_floating_button_normal_inactive  = config .. "titlebar/floating_normal_inactive.png"
-theme.titlebar_floating_button_focus_inactive   = config .. "titlebar/floating_focus_inactive.png"
-theme.titlebar_floating_button_normal_active    = config .. "titlebar/floating_normal_active.png"
-theme.titlebar_floating_button_focus_active     = config .. "titlebar/floating_focus_active.png"
+theme.titlebar_floating_button_normal_inactive  = path.."titlebar/floating_normal_inactive.png"
+theme.titlebar_floating_button_focus_inactive   = path.."titlebar/floating_focus_inactive.png"
+theme.titlebar_floating_button_normal_active    = path.."titlebar/floating_normal_active.png"
+theme.titlebar_floating_button_focus_active     = path.."titlebar/floating_focus_active.png"
 
-theme.titlebar_maximized_button_normal_inactive = config .. "titlebar/maximized_normal_inactive.png"
-theme.titlebar_maximized_button_focus_inactive  = config .. "titlebar/maximized_focus_inactive.png"
-theme.titlebar_maximized_button_normal_active   = config .. "titlebar/maximized_normal_active.png"
-theme.titlebar_maximized_button_focus_active    = config .. "titlebar/maximized_focus_active.png"
+theme.titlebar_maximized_button_normal_inactive = path.."titlebar/maximized_normal_inactive.png"
+theme.titlebar_maximized_button_focus_inactive  = path.."titlebar/maximized_focus_inactive.png"
+theme.titlebar_maximized_button_normal_active   = path.."titlebar/maximized_normal_active.png"
+theme.titlebar_maximized_button_focus_active    = path.."titlebar/maximized_focus_active.png"
 
-theme.wibox_separator   = config .. wibox .. "separator.png"
-theme.wibox_mpd         = config .. wibox .. "music.png"
-theme.wibox_net_up      = config .. wibox .. "up.png"
-theme.wibox_net_down    = config .. wibox .. "down.png"
-theme.wibox_thermal     = config .. wibox .. "temp.png"
-theme.wibox_bat         = config .. wibox .. "bat.png"
-theme.wibox_volume      = config .. wibox .. "vol.png"
-theme.wibox_novolume    = config .. wibox .. "volmute.png"
-theme.wibox_date        = config .. wibox .. "time.png"
-theme.wibox_deluge      = config .. wibox .. "deluge.png"
-theme.wibox_mem         = config .. wibox .. "mem.png"
-theme.wibox_weather     = config .. wibox .. "weather/cloud.png"
-theme.kbdd = {
-    ru = config .. "kbdd/ru.png",
-    us = config .. "kbdd/us.png"
+theme.wibox = {}
+theme.wibox.separator = wb.."separator.png"
+theme.wibox.mpd = {
+    ["music"]   = wb.."player/music.png",
+    ["play"]    = wb.."player/start.png",
+    ["pause"]   = wb.."player/pause.png",
+    ["stop"]    = wb.."player/stop.png",
+    ["shuffle"] = wb.."player/shuffle.png",
+    ["repeat"]  = wb.."player/repeat.png",
 }
+theme.wibox.cpu = wb.."processor.png"
+theme.wibox.hdd = wb.."drive.png"
+theme.wibox.rss = wb.."rss.png"
+--theme.wibox.bat = wb.."bat.png"
+theme.wibox.battery = {
+    ["000"]     = wb.."battery/000.png",
+    ["000_c"]   = wb.."battery/000_c.png",
+    ["020_c"]   = wb.."battery/020_c.png",
+    ["020"]     = wb.."battery/020.png",
+    ["040_c"]   = wb.."battery/040_c.png",
+    ["040"]     = wb.."battery/040.png",
+    ["060_c"]   = wb.."battery/060_c.png",
+    ["060"]     = wb.."battery/060.png",
+    ["080_c"]   = wb.."battery/080_c.png",
+    ["080"]     = wb.."battery/080.png",
+    ["100_c"]   = wb.."battery/100_c.png",
+    ["100"]     = wb.."battery/100.png",
+    ["missing"] = wb.."battery/missing.png",
+}
+theme.wibox.net = {
+    nm = {
+        ["none"] = wb.."net/nm/none.png",
+        ["00"]   = wb.."net/nm/00.png",
+        ["25"]   = wb.."net/nm/25.png",
+        ["50"]   = wb.."net/nm/50.png",
+        ["75"]   = wb.."net/nm/75.png",
+        ["100"]  = wb.."net/nm/100.png",
+    },
+    up   = wb.."net/up.png",
+    down = wb.."net/down.png",
+}
+theme.wibox.volume = {
+    volume  = wb.."volume/vol.png",
+    mute    = wb.."volume/vol-mute.png",
+    dim     = wb.."volume/vol-dim.png",
+    mutedim = wb.."volume/vol-mute-dim.png",
+    -- headphones
+    ["alsa_output.usb-Logitech_Logitech_Wireless_Headset_000D44D39CAA-00-Headset.analog-stereo"] =
+    {
+        volume  = wb.."volume/headphones.png",
+        mute    = wb.."volume/headphones-mute.png",
+        dim     = wb.."volume/headphones-dim.png",
+        mutedim = wb.."volume/headphones-mute-dim.png",
+    },
+    clients =
+    {
+        ["Music Player Daemon"]             = wb.."volume/clients/music.png",
+        ["MPlayer"]                         = wb.."volume/clients/mplayer.png",
+        ["mplayer2"]                        = wb.."volume/clients/mplayer2.png",
+        ["mpv Media Player"]                = wb.."volume/clients/mplayer2.png",
+        ["ALSA plug-in [plugin-container]"] = wb.."volume/clients/ff.png",
+        ["radiotray"]                       = wb.."volume/clients/radiotray.png",
+        ["qemu-system-x86_64"]              = wb.."volume/clients/qemu.png",
+    },
+}
+theme.wibox.date        = wb.."time.png"
+theme.wibox.deluge      = wb.."deluge.png"
+theme.wibox.mem         = wb.."mem.png"
+theme.wibox.calendar    = wb.."calendar.png"
+theme.wibox.disks       = wb.."drive.png"
+theme.wibox.usb         = wb.."usb.png"
+theme.wibox.cdrom       = wb.."cdrom.png"
+theme.wibox.log         = wb.."logview.png"
+theme.wibox.dict        = wb.."dict.png"
 
--- You can use your own command to set your wallpaper
-theme.wallpaper_cmd = { "awsetbg " .. config .. "wallpaper/vladstudio-1.jpg" }
+theme.wallpaper = path.."wallpaper/earthwater.jpg"
 
 -- You can use your own layout icons like this:
-theme.layout_fairh      = config .. "layouts/fairhw.png"
-theme.layout_fairv      = config .. "layouts/fairvw.png"
-theme.layout_floating   = config .. "layouts/floatingw.png"
-theme.layout_magnifier  = config .. "layouts/magnifierw.png"
-theme.layout_tabs       = config .. "layouts/tabs.png"
-theme.layout_static     = config .. "layouts/spiralw.png"
-theme.layout_max        = config .. "layouts/maxw.png"
-theme.layout_fullscreen = config .. "layouts/fullscreenw.png"
-theme.layout_tilebottom = config .. "layouts/tilebottomw.png"
-theme.layout_tileleft   = config .. "layouts/tileleftw.png"
-theme.layout_tile       = config .. "layouts/tilew.png"
-theme.layout_tiletop    = config .. "layouts/tiletopw.png"
-theme.layout_spiral     = config .. "layouts/spiralw.png"
-theme.layout_dwindle    = config .. "layouts/dwindlew.png"
+theme.layout_fairh      = path.."layouts/fairhw.png"
+theme.layout_fairv      = path.."layouts/fairvw.png"
+theme.layout_floating   = path.."layouts/floatingw.png"
+theme.layout_magnifier  = path.."layouts/magnifierw.png"
+theme.layout_tabs       = path.."layouts/tabs.png"
+theme.layout_static     = path.."layouts/spiralw.png"
+theme.layout_max        = path.."layouts/maxw.png"
+theme.layout_fullscreen = path.."layouts/fullscreenw.png"
+theme.layout_tilebottom = path.."layouts/tilebottomw.png"
+theme.layout_tileleft   = path.."layouts/tileleftw.png"
+theme.layout_tile       = path.."layouts/tilew.png"
+theme.layout_tiletop    = path.."layouts/tiletopw.png"
+theme.layout_spiral     = path.."layouts/spiralw.png"
+theme.layout_dwindle    = path.."layouts/dwindlew.png"
 
 theme.awesome_icon = "/usr/share/awesome/icons/awesome16.png"
+
+theme.infobox_bg = "#000000"
+
+theme.dialog_ok     = path.."dialog/ok.png"
+theme.dialog_cancel = path.."dialog/cancel.png"
 
 return theme
 -- vim: filetype=lua:foldmethod=marker

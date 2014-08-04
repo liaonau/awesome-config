@@ -1,15 +1,15 @@
--- прогноз погоды с GisMeteo
-require "lxp"
+--  прогноз погоды с GisMeteo
+local lxp = require "lxp"
+
+local weather = {}
 
 local file = "/var/tmp/weather/weather.xml"
-
---{{{ парсер, forecast — табличное представление xml
+-- {{{ парсер, forecast — табличное представление xml
 local function parse(file)
     local forecast = {}
     local c = 0
     local inside_forecast = false
-
-    --{{{ заполнитель forecast
+    -- {{{ заполнитель forecast
     local function add_data (table, name, attrs)
         local name = name
         local table = table
@@ -22,9 +22,8 @@ local function parse(file)
             table[v] = attrs[v]
         end
     end
-    --}}}
-
-    --{{{ callbacks парсера
+    -- }}}
+    -- {{{ callbacks парсера
     local callbacks = {
         StartElement = function (parser, name, attributes)
             if (name == 'FORECAST') then
@@ -40,8 +39,7 @@ local function parse(file)
             if (name == 'FORECAST') then inside_forecast = false end
         end,
     }
-    --}}}
-
+    -- }}}
     local parser = lxp.new(callbacks)
     for line in io.lines(file) do
         parser:parse(line)
@@ -49,9 +47,9 @@ local function parse(file)
     parser:close()
     return forecast
 end
---}}}
+-- }}}
 
---{{{ в weather — человечески понятные значения
+-- {{{ в weather — человечески понятные значения
 local function humanize(forecast)
     local weather = {}
     for c, fc in ipairs(forecast) do
@@ -122,12 +120,13 @@ local function humanize(forecast)
     end
     return weather
 end
---}}}
+-- }}}
 
-function get_weather()
+function weather.get()
     local fc = parse(file)
     local wt = humanize(fc)
     return wt
 end
 
--- vim: foldmethod=marker
+return weather
+--  vim: foldmethod=marker

@@ -1,35 +1,45 @@
 -- {{{ Variable definitions, imports
-os.setlocale("ru_RU.UTF8")
-require("awful")
+io.stderr:write("Starting Awesome WM\n")
+os.setlocale(os.getenv("LANG"))
+
+local awful = require("awful")
 require("awful.autofocus")
-require("awful.rules")
-require("awful.remote")
+awful.rules      = require("awful.rules")
+local keygrabber = require("awful.keygrabber")
 
-require("beautiful")
+vicious = require("vicious")
+pulse   = require("pulse")
+shifty  = require("shifty")
+gears   = require("gears")
+naughty = require("naughty")
+naughty.config.icon_dirs = {
+    awful.util.getdir("config").."/themes/naughty/",
+    "/usr/share/pixmaps/",
+    "/usr/share/icons/gnome/16x16/status/",
+}
+local wibox     = require("wibox")
+local beautiful = require("beautiful")
+local weather   = require("weather")
+local translate = require("translate")
 
-require("vicious")
-require("naughty")
+local cosy      = require("cosy")
+local markup    = cosy.markup
+local infobox   = require("infobox")
 
--- меню
-require('freedesktop.menu')
-require('freedesktop.utils')
-require('freedesktop.desktop')
--- погода
-require("weather")
+local freedesktop   = {}
+freedesktop.menu    = require('freedesktop.menu')
+freedesktop.utils   = require('freedesktop.utils')
+freedesktop.desktop = require('freedesktop.desktop')
 
-require("shifty")
+-- remote последним
+awful.remote = require("awful.remote")
 
 -- Themes define colours, icons, and wallpapers
---beautiful.init("/usr/share/awesome/themes/default/theme.lua")
 beautiful.init(awful.util.getdir("config") .. "/themes/theme.lua")
-
--- раскладка
-require("kbdd")
 
 -- This is used later as the default terminal and editor to run.
 terminal = "urxvt"
-editor = os.getenv("EDITOR") or "vim"
-editor_cmd = terminal .. " -e " .. editor
+editor   = "emacsclient -d "..os.getenv("DISPLAY").." -a vim"
 
 -- Default modkey.
 modkey = "Mod4"
@@ -53,586 +63,782 @@ layouts =
     als.tabs,
 }
 
-tags_iconsdir = awful.util.getdir("config") .. "/themes/tags/"
+-- java AWT/swing fix
+-- наверное, ненужно с кагого-то коммита
+--awful.util.spawn("wmname LG3D")
 -- }}}
-
---{{{ shifty
+-- {{{ shifty
 shifty.config.defaults = {
     layout = als.tile.top,
     exclusive = true,
---    run = function(tag) naughty.notify({ text = tag.name }) end,
 }
 
 shifty.config.tags = {
     ["1"] = {
-        position = 1, icon = tags_iconsdir.."terminal.png",
+        position = 1, icon = "terminal.png",
         init = true, exclusive = false, layout = als.tabs,
     },
     ["2"] = {
-        position = 2, icon = tags_iconsdir.."ff.png",
-        spawn = "firefox",
-    },
-    ["3"] = {
-        position = 3, icon = tags_iconsdir.."im.png",
-        spawn = "pidgin",
-    },
-    ["4"] = {
-        position = 4, icon = tags_iconsdir.."mplayer.png",
-        spawn = "urxvt -name mplayer_term", layout = als.tabs,
-    },
-    ["5"] = {
-        position = 5, icon = tags_iconsdir.."deluge.png",
-        spawn = "deluge-gtk",
-    },
-    ["6"] = {
-        position = 6, icon = tags_iconsdir.."gvim.png",
-        spawn = "gvim --servername GVIM",
-    },
-    ["7"] = {
-        position = 7, icon = tags_iconsdir.."dict.png",
-        spawn = "stardict",
-    },
-    ["8"] = {
-        position = 8, icon = tags_iconsdir.."geeqie.png",
-    },
-    ["9"] = {
-        position = 9, icon = tags_iconsdir.."evince.png",
-    },
-    ["10"] = {
-        position = 10,icon = tags_iconsdir.."fbreader.png",
-        spawn = "fbreader",
-    },
-    ["wine"] = {
-        position = 11, icon = tags_iconsdir.."wine.png",
-    },
-    ["lk"] = {
-        position = 12, icon = tags_iconsdir.."browser.png",
+        position = 2, icon = "ff.png", layout = als.tabs,
+        --spawn = "firefox",
         spawn = "browser",
     },
-    ["htop"] = {
-        position = 13, icon = tags_iconsdir.."htop.png", 
-        spawn = "urxvt -name htopTerm -e htop",
+    ["3"] = {
+        --position = 3, icon = "eclipse.png",
+        --spawn = "eclipse",
+        --position = 3, icon = "idea.png",
+        --spawn = "idea-11",
+        position = 3, icon = "emacs.png",
+        layout = als.tabs,
+        spawn = editor .. " -c",
     },
-    ["mpd"] = {
-        position = 14, icon = tags_iconsdir.."audio.png",
-        spawn = "urxvt -name ncmpcTerm -e ncmpc",
+    ["4"] = {
+        position = 4, icon = "dict.png",
+        spawn = "stardict",
+    },
+    ["5"] = {
+        position = 5, icon = "mplayer.png",
+    },
+    ["6"] = {
+        position = 6, icon = "deluge.png",
+        spawn = "deluge-gtk",
+    },
+    ["7"] = {
+        position = 7, icon = "audio.png",
+        spawn = "cantata",
+    },
+    ["8"] = {
+        position = 8, icon = "image.png",
+    },
+    ["9"] = {
+        position = 9, icon = "evince.png",
+    },
+    ["10"] = {
+        position = 10,icon = "fbreader.png",
+        spawn = "fbreader",
+    },
+    ["emul"] = {
+        position = 11, icon = "emul.png",
+        layout = als.floating,
+    },
+    ["fm"] = {
+        position = 12, icon = "file.png",
+        spawn = "spacefm",
+    },
+    ["htop"] = {
+        position = 13, icon = "htop.png",
+        spawn = terminal.." -name htopTerm -e htop",
+    },
+    ["im"] = {
+        position = 15, icon = "im.png",
+        mwfact   = 0.7,
+        nmaster  = 1,
+        ncol     = 1,
+        layout   = als.tile.left,
+        --spawn    = "pidgin",
+    },
+    ["rss"] = {
+        position = 17, icon = "rss.png",
+        spawn = "liferea",
+    },
+    ["log"] = {
+        position = 18, icon = "logview.png",
+        spawn = terminal.." -cr black -rv -name logTerm -e /bin/sh -c '/usr/bin/journalctl -b -n 39 -f | ccze -A -m ansi'",
+    },
+    ["cloud"] = {
+        position = 20, icon = "dropbox.png",
     },
 }
+for k, v in pairs(shifty.config.tags) do
+    if (v.icon) then
+        v.icon = awful.util.getdir("config").."/themes/tags/"..v.icon
+    end
+end
 
 shifty.config.apps = {
-    { match = {["type"] = {"dialog"}}, ontop    = true, },
-    { match = {"urxvt"              }, tag      = "1",  },
-    { match = {"[Ff]irefox"         }, tag      = "2",  },
-    { match = {"[Ss]kype", "[Xx]chat", "[Pp]idgin"      }, tag  = "3",  },
-    { match = {"^conversation$"     }, nopopup  = true, },
-    { match = {"^[Mm][Pp]layer", "[Vv]lc"               }, tag  = "4",  },
-    { match = {"Deluge"             }, tag      = "5",  },
-    { match = {"^[Gg]vim$"          }, tag      = "6",  },
-    { match = {"^[Ss]tardict$"      }, tag      = "7",  },
-    { match = {"geeqie", "[Gg]imp"  }, tag      = "8",  },
-    { match = {"gimp%-image%-window"}, slave    = true, },
-    { match = {"[Ee]vince"          }, tag      = "9",  },
-    { match = {"[Ff][Bb]reader"     }, tag      = "10", },
-    { match = {"^[Ll]uakit"         }, tag      = "lk", },
-    { match = {"htopTerm"           }, tag      = "htop",   },
-    { match = {"ncmpcTerm"          }, tag      = "mpd",    },
-    { match = {"[Ww]ine"            }, tag      = "wine",   },
-    { match = { ""                  }, honorsizehints=false },
+    { match = { ["type"]  = {"dialog"} }, ontop = true, },
+    {
+      match = { instance = {"pavucontrol"}},
+      float = true, geometry = {223, beautiful.main_wibox_height, 800, 730},
+      ontop = true, skip_taskbar = true, intrusive = true,
+    },
+
+    { match = { class    = {"^URxvt$"                }, }, tag = "1",        },
+    { match = { class    = {"^Firefox$"              }, }, tag = "2",        },
+    { match = { class    = {"^luakit$"               }, }, tag = "2",        },
+    { match = { class    = {"^Uzbl.*$"               }, }, tag = "2",        },
+    { match = { class    = {"^Dwb$"                  }, }, tag = "2",        },
+    { match = { name     = {".*IntelliJ IDEA.*"      }, }, tag = "3",        },
+    { match = { instance = {"^jetbrains%-idea$"      }, }, tag = "3",        },
+    { match = { class    = {"^sun%-awt%-X11%-.*"     }, }, tag = "3",        },
+    { match = { class    = {"^Devhelp$"              }, }, tag = "3",        },
+    { match = { class    = {"^Emacs$"                }, }, tag = "3",        },
+    { match = { class    = {"^Gvim$"                 }, }, tag = "3",        },
+    { match = { class    = {"^Stardict$"             }, }, tag = "4",        },
+    { match = { class    = {"^mpv$", "Vlc", "^Luavid$", "^Gupnp%-av%-cp$", "^org%-tinymediamanager*" },
+              }, tag = "5",
+    },
+    { match = { class    = {"^plugin%-container$"    }, }, tag = "5",        },
+    { match = { class    = {"^Deluge$"               }, }, tag = "6",        },
+    { match = { class    = {"^Cantata$"              }, }, tag = "7",        },
+    { match = { class    = {"^Sxiv$"                 }, }, tag = "8",        },
+    { match = { class    = {"^Geeqie$"               }, }, tag = "8",        },
+    { match = { class    = {"^Zathura$"              }, }, tag = "9",        },
+    { match = { class    = {"^Fbreader$"             }, }, tag = "10",       },
+    { match = { class    = {"^Spacefm$"              }, }, tag = "fm",       },
+    { match = { class    = {"^Wuala$", "^Dropbox$"   }, }, tag = "cloud",    },
+    { match = { instance = {"^htopTerm$"             }, }, tag = "htop",     },
+    { match = { instance = {"^logTerm$"              }, }, tag = "log",      },
+    { match = { class    = {"^Wine$", "^qemu-.*", "^Spicec$", "^Xephyr$", "^org%-serviio%-console%-ServiioConsole$" },
+                --name     = {"spice://localhost:5900.*"}
+              }, tag = "emul",
+    },
+    { match = { class    = {"^Liferea$"              }, }, tag = "rss",      },
+    { match = { class    = {"^Steam$"                }, }, tag = "steam",    },
+    { match = { class    = {"^Skype$", "^Xchat$", "^Pidgin$", }
+              }, tag = "im",
+    },
+    { match = { class    = {"^Pidgin$"}, role = {"^conversation$"}, }, nopopup = true, slave = false },
+    { match = { class    = {"^Pidgin$"}, role = {"^buddy_list$"  }, }, slave = true },
+
+    { match = { "" }, honorsizehints=false },
 }
 
 shifty.init()
---}}}
-
+-- }}}
 -- {{{ Menu
-freedesktop.utils.terminal      = terminal  -- default: "xterm"
+freedesktop.utils.terminal      = terminal
 freedesktop.utils.icon_theme    = 'gnome'   -- look inside /usr/share/icons/, default: nil (don't use icon theme)
 
 menu_items = freedesktop.menu.new()
 myawesomemenu = {
-    { "manual",     terminal .. " -e man awesome",          freedesktop.utils.lookup_icon({ icon = 'help' })                },
-    { "edit config",editor_cmd .. " " .. awesome.conffile,  freedesktop.utils.lookup_icon({ icon = 'package_settings' })    },
-    { "restart",    awesome.restart,                        freedesktop.utils.lookup_icon({ icon = 'gtk-refresh' })         },
-    { "quit",       awesome.quit,                           freedesktop.utils.lookup_icon({ icon = 'gtk-quit' })            },
+    { "manual",      terminal .. " -e man awesome",       freedesktop.utils.lookup_icon({ icon = 'help' })            },
+    { "edit config", editor   .. " " .. awesome.conffile, freedesktop.utils.lookup_icon({ icon = 'package_settings' })},
+    { "restart",     awesome.restart,                     freedesktop.utils.lookup_icon({ icon = 'gtk-refresh' })     },
+    { "quit",        awesome.quit,                        freedesktop.utils.lookup_icon({ icon = 'gtk-quit' })        },
 }
 table.insert(menu_items, { "awesome",       myawesomemenu,  beautiful.awesome_icon })
 table.insert(menu_items, { "open terminal", terminal,       freedesktop.utils.lookup_icon({icon = 'terminal'}) })
 
-mymainmenu = awful.menu.new({ items = menu_items, width = 150 })
+mymainmenu = awful.menu.new({ items = menu_items, theme = {width = 150 } })
 mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon, menu = mymainmenu })
-
---for s = 1, screen.count() do
---    freedesktop.desktop.add_applications_icons(   {screen = s, showlabels = true})
---    freedesktop.desktop.add_dirs_and_files_icons( {screen = s, showlabels = true})
---end
 -- }}}
-
---{{{ Naughty
---{{{ перевод
-local sdcv = nil
-
-local function remove_sdcv()
-    naughty.destroy(sdcv)
-    sdcv = nil
+-- {{{{{{ info wiboxes
+-- {{{ info wibox с df
+local disks = infobox(
+function ()
+    local text = awful.util.pread("di -h -f MpTBv -x squashfs,aufs,rootfs")
+    text = string.gsub(text, "(/[^%s]*)",  markup.b('%1'))
+    text = string.gsub(text, "(%d+%%)",    markup.g("%1"))
+    text = string.gsub(text, "([78]%d%%)", markup.y("%1"))
+    text = string.gsub(text, "(9%d%%)",    markup.r("%1"))
+    text = string.gsub(text, "(100%%)",    markup.r("%1"))
+    text = string.gsub(text, "(tmpfs)",    markup("#777777", "%1"))
+    text = text:sub(1, -2)
+    text = markup.font_desc("monospace 11", text)
+    return {text = text}
+end, nil,
+beautiful.wibox.disks, 'df'
+)
+-- }}}
+-- {{{ info wibox с календарем
+local date = infobox(
+function (s)
+    local today = os.date('*t')
+    local m     = today.year * 12 + today.month + s.offset - 1
+    local month = m % 12 + 1
+    local year  = math.floor(m / 12)
+    local text  = awful.util.pread("/usr/bin/cal " .. month .. ' ' .. year):sub(1, -2)
+    if (s.offset == 0) then
+        text = string.gsub(text, "([^%d]"..today.day.."[^%d])", markup.b("%1"))
+    end
+    text = markup.font_desc('monospace 12', text)
+    return {text = text}
+end,
+{offset = 0},
+beautiful.wibox.calendar, 'календарь'
+)
+date.on_hide = function(s)
+    s.offset = 0
 end
-
-function add_sdcv(expr)
-    if (sdcv and sdcv.box.screen) then
-        remove_sdcv()
+date.on_show = function(s)
+    s.offset = 0
+end
+-- }}}
+-- {{{ info wibox с погодой
+local gismeteo = infobox(
+function ()
+    local text_weather = ''
+    local icon_weather
+    local gw = weather.get()
+    for c = 1,4 do
+        local gm = gw[c]
+        if (c == 1 and gm['icon']) then
+            icon_weather = awful.util.getdir('config')..'/themes/weather/'..gm['icon']
+        end
+        text_weather = text_weather ..
+        markup.b(gm['day']..':\n')..
+        gm['cloudiness']..', '..gm['precipitation']..'\n'..
+        'температура:   '..gm['temperature']..'°\n'..
+        'ощущается как: '..gm['heat']..'°\n'..
+        'ветер:         '..gm['wind']..' м/с\n'..
+        'давление:      '..gm['pressure']..' мм.рт.ст.\n'
+    end
+    text_weather = text_weather:sub(1, -2)
+    text_weather = markup.font_desc('monospace 12', text_weather)
+    return {
+        text = text_weather,
+        title = 'погода ' .. gw.date,
+        icon = icon_weather,
+    }
+end
+)
+-- }}}
+-- {{{ info wibox с переводом
+slovnik = infobox(
+function (s)
+    local title = ''
+    local text  = translate(s.style, s.word)
+    if (not text or text == '') then
+        title = markup.bold('не найдено: «'..markup.bold(markup.r(s.word)).."»")
+    end
+    return {
+        text  = text,
+        title = title,
+    }
+end,
+{
+    word = nil,
+    style = {},
+},
+beautiful.wibox.dict, "перевод"
+)
+slovnik.style = {
+    k    = {'red', 'bold'},
+    opt  = {'red'},
+    gr   = {'bold'},
+    b    = {'bold'},
+    tr   = {'tr', 'cyan'},
+    i    = {'italic'},
+    kref = {'blue', 'small'},
+    rref = {'underline', 'blue', 'small'},
+    syn  = {'bold', 'small', 'green'},
+    ex   = {'gray', 'small'},
+    abr  = {'green'},
+    c    = {'skip'},
+    mrkd = {'skip'},
+    co   = {'white'},
+    dtrn = {'magenta'},
+    sr   = {'delete'},
+}
+slovnik.toggle_style = function(tag)
+    if (slovnik.state.style[tag] == 'delete') then
+        slovnik.state.style[tag] = slovnik.style[tag]
     else
-        if (sdcv) then
-            remove_sdcv()
-        end
-        if (expr) then
-            sdcv_word = awful.util.pread("slovnik " .. expr)
-        else
-            sdcv_word = awful.util.pread("slovnik")
-        end
-        sdcv_word = string.gsub(sdcv_word, "Найдено (%d*) слов, похожих на ([^\n]*)\.\n", " <span fgcolor='#00bb00'>%2</span>: %1\n")
-        sdcv_word = string.gsub(sdcv_word, "Ничего похожего на (.*), извините .*", " <span fgcolor='#00bb00'>%1</span>: не найдено\n")
-        sdcv_word = string.gsub(sdcv_word, "\n([^ ]*)\n", "\n<span fgcolor='#00bbbb'>%1</span>\n")
-        sdcv_word = string.gsub(sdcv_word, "\n        ", "\n  ")
-        sdcv = naughty.notify({
-            text = string.format( "<span font_desc='monospace 12'>%s</span>", sdcv_word ),
-            title='перевод',
-            timeout=10,
-        })
+        slovnik.state.style[tag] = 'delete'
     end
 end
---}}}
-
---{{{ календарь
-local calendar = nil
-local calendar_offset = 0
-
-function remove_calendar()
-    if calendar ~= nil then
-        naughty.destroy(calendar)
-        calendar = nil
-        calendar_offset = 0
+slovnik.on_hide = function()
+    if (slovnik.grabber) then
+        keygrabber.stop(slovnik.grabber)
     end
 end
-
-function add_calendar(inc_offset)
-    if (not inc_offset) then inc_offset = 0 end
-    local save_offset = calendar_offset
-    remove_calendar()
-    calendar_offset = save_offset + inc_offset
-    local datespec = os.date("*t")
-    datespec = datespec.year * 12 + datespec.month - 1 + calendar_offset
-    datespec = (datespec % 12 + 1) .. " " .. math.floor(datespec / 12)
-    local cal = string.gsub(awful.util.pread("cal -m "..datespec), "^%s*(.-)%s*$", "%1")
-    local day = os.date("%d")
-    if (calendar_offset == 0) then
-        cal = string.gsub(cal, day, "<span fgcolor='#6666ff'>"..day.."</span>")
-    end
-    calendar = naughty.notify({
-        text = string.format( "<span font_desc='monospace 12'>%s</span>", cal ),
-        title='календарь',
-        icon=awful.util.getdir('config')..'/themes/icons/time.png',
-        timeout=0,
-    })
-end
---}}}
-
---{{{ диск
-local disks_free = nil
-
-local function remove_disks_free()
-    naughty.destroy(disks_free)
-    disks_free = nil
-end
-
-local function remove_check_disks_free()
-    if (disks_free ~= nil) then remove_disks_free() end
-end
-
-function add_disks_free()
-    if (disks_free and disks_free.box.screen) then
-        remove_disks_free()
-    else
-        if (disks_free) then
-            remove_disks_free()
+slovnik.on_show = function()
+    slovnik.grabber = keygrabber.run(
+    function(mods, key, event)
+        if event ~= "press" then return end
+        local mod = {}
+        for k, v in ipairs(mods) do mod[v] = true end
+        if (mod.Control and (key == "c" or key == "g"))
+            or (key == "q")
+            or (key == "Escape") then
+            slovnik.hide()
+            return false
+        elseif (mod.Mod4 and key == "z") then
+            slovnik.hide()
+            return false
+        elseif (not mod.Control and key == "e") then
+            slovnik.toggle_style("ex")
+            slovnik.update()
+            slovnik.fit()
+            return true
+        elseif (not mod.Control and key == "r") then
+            slovnik.toggle_style("syn")
+            slovnik.toggle_style("kref")
+            slovnik.update()
+            slovnik.fit()
+            return true
+        elseif (not mod.Control and key == "t") then
+            slovnik.toggle_style("syn")
+            slovnik.toggle_style("kref")
+            slovnik.toggle_style("ex")
+            slovnik.update()
+            slovnik.fit()
+            return true
         end
-        local disks_text = awful.util.pread("di -h -f MpTBv -x squashfs,aufs,rootfs")
-        disks_text = string.gsub(disks_text, "(/[^%s]*)", "<span fgcolor='#8888ff'>%1</span>")
-        disks_text = string.gsub(disks_text, "(%d+%%)", "<span fgcolor='#88ff88'>%1</span>")
-        disks_text = string.gsub(disks_text, "([78]%d%%)", "<span fgcolor='#ffff88'>%1</span>")
-        disks_text = string.gsub(disks_text, "(9%d%%)", "<span fgcolor='#ff8888'>%1</span>")
-        disks_text = string.gsub(disks_text, "(100%%)", "<span fgcolor='#ff8888'>%1</span>")
-        disks_text = string.gsub(disks_text, "(tmpfs)", "<span fgcolor='#777777'>%1</span>")
-        disks_free = naughty.notify({
-            text = string.format( "<span font_desc='monospace 11'>%s</span>", disks_text ),
-            title='df',
-            icon=awful.util.getdir('config')..'/themes/icons/drive.png',
-            timeout=0,
-        })
     end
+    )
 end
---}}}
-
---{{{ deluge
-local deluge_status = nil
-
-local function remove_deluge()
-    naughty.destroy(deluge_status)
-    deluge_status = nil
-end
-
-local function remove_check_deluge()
-    if (deluge_status ~= nil) then remove_deluge() end
-end
-
-function add_deluge()
-    if (deluge_status and deluge_status.box.screen) then
-        remove_deluge()
-    else
-        if (deluge_status) then
-            remove_deluge()
-        end
-        local deluge_status_text = awful.util.pread("deluge_status.py")
-        deluge_status_text = string.gsub(deluge_status_text, "^([^\n]+)", "<span fgcolor='#8888ff'>%1</span>")
-        deluge_status_text = string.gsub(deluge_status_text, "\n\n([^\n]+)", "\n\n<span fgcolor='#8888ff'>%1</span>")
-        deluge_status_text = string.gsub(deluge_status_text, "\n(Downloading)\n", "\n<span fgcolor='#88ff88'>%1</span>\n")
-        deluge_status_text = string.gsub(deluge_status_text, "\n(Seeding)\n", "\n<span fgcolor='#88ff88'>%1</span>\n")
-        deluge_status_text = string.gsub(deluge_status_text, "\n(Paused)\n", "\n<span fgcolor='#777777'>%1</span>\n")
-        deluge_status_text = string.gsub(deluge_status_text, "\n(Queued)\n", "\n<span fgcolor='#ffff88'>%1</span>\n")
-        deluge_status_text = string.gsub(deluge_status_text, "\n(Unlnown)\n", "\n<span fgcolor='#ff8888'>%1</span>\n")
-        deluge_status_text = string.gsub(deluge_status_text, "(ETA:)([^\n]+)\n", "%1<span fgcolor='#ff8888'>%2</span>\n")
-        deluge_status_text = string.gsub(deluge_status_text, " (%d+.%d*%%)", " <span fgcolor='#88ffff'>%1</span>")
-        deluge_status_text = string.gsub(deluge_status_text, "&", "&amp;")
-        deluge_status = naughty.notify({
-            text = string.format( "<span font_desc='monospace 10'>%s</span>", deluge_status_text ),
-            title='deluge',
-            icon= image(beautiful.wibox_deluge),
-            timeout=0,
-        })
-    end
-end
---}}}
-
---{{{ погода
-local weather_status = nil
-
-local function remove_weather()
-    naughty.destroy(weather_status)
-    weather_status = nil
-end
-
-local function remove_check_weather()
-    if (weather_status ~= nil) then remove_weather() end
-end
-
-function add_weather()
-    if (weather_status and weather_status.box.screen) then
-        remove_weather()
-    else
-        if (weather_status) then
-            remove_weather()
-        end
-        local text_weather = ''
-        local icon_weather
-        local gw = get_weather()
-        for c = 1,4 do
-            local gm = gw[c]
-            if (c == 1 and gm['icon']) then
-                icon_weather = awful.util.getdir('config')..'/themes/weather/'..gm['icon']
-            end
-            text_weather = text_weather ..
-            '<span fgcolor="#8888ff">'..gm['day']..':</span>\n'..
-            gm['cloudiness']..', '..gm['precipitation']..'\n'..
-            'температура:   '..gm['temperature']..'°\n'..
-            'ощущается как: '..gm['heat']..'°\n'..
-            'ветер:         '..gm['wind']..' м/с\n'..
-            'давление:      '..gm['pressure']..' мм.рт.ст.\n\n'
-        end
-        weather_status = naughty.notify({
-            text = string.format( "<span font_desc='monospace 12'>%s</span>", text_weather ),
-            title='погода ' .. gw.date,
-            icon=icon_weather,
-            timeout=0,
-        })
-    end
-end
---}}}
---}}}
-
--- {{{ Wibox
+-- }}}
+-- }}}}}}
+-- {{{{{{ main wibox
 mywibox = {}
-
-mysystray = widget({ type = "systray" })
-mypromptbox = {}
-mylayoutbox = {}
---{{{ separator
---separator = widget({ type = "textbox" })
---separator.text = ' '
-separator = widget({ type = "imagebox" })
-separator.image = image(beautiful.wibox_separator)
---}}}
---{{{ taglist, +мышь
+mywibox.toggle = function () mywibox[mouse.screen].visible = not mywibox[mouse.screen].visible end
+-- {{{ tray
+systray = wibox.widget.systray()
+systray.stupid_bug = drawin({})
+systray_layout = wibox.layout.constraint()
+systray_layout:set_widget(systray)
+systray.visible = true
+systray.toggle  = function()
+    systray.visible = not systray.visible
+    if (systray.visible) then
+        systray_layout:set_widget(systray)
+    else
+        -- To hide the systray (actually "to move the systray into the drawin called
+        -- stupid_bug which is not visible and making sure it does not get moved back")
+        awesome.systray(systray.stupid_bug, 0, 0, 10, true, "#000000")
+        systray_layout:set_widget(nil)
+    end
+end
+-- }}}
+-- {{{ separator
+separator = wibox.widget.imagebox()
+separator:set_image(beautiful.wibox.separator)
+-- }}}
+-- {{{ taglist, +мышь
 mytaglist = {}
+shifty.taglist = mytaglist
 mytaglist.buttons = awful.util.table.join(
     awful.button({ }, 1, awful.tag.viewonly),
     awful.button({ modkey }, 1, awful.client.movetotag),
     awful.button({ }, 3, awful.tag.viewtoggle),
     awful.button({ modkey }, 3, awful.client.toggletag),
-    awful.button({ }, 4, awful.tag.viewnext),
-    awful.button({ }, 5, awful.tag.viewprev)
+    awful.button({ }, 4, function(t) awful.tag.viewnext(awful.tag.getscreen(t)) end),
+    awful.button({ }, 5, function(t) awful.tag.viewprev(awful.tag.getscreen(t)) end)
+
 )
-shifty.taglist = mytaglist
---}}}
---{{{ tasklist, +мышь
+-- }}}
+-- {{{ tasklist, +мышь
 mytasklist = {}
 mytasklist.buttons = awful.util.table.join(
-    awful.button({ }, 1, function (c)
-        if c == client.focus then
-            c.minimized = true
-        else
-            if not c:isvisible() then
-                awful.tag.viewonly(c:tags()[1])
-            end
-            -- This will also un-minimize
-            -- the client, if needed
-            client.focus = c
-            c:raise()
+awful.button({ }, 1, function (c)
+    if c == client.focus then
+        c.minimized = true
+    else
+        -- Without this, the following
+        -- :isvisible() makes no sense
+        c.minimized = false
+        if not c:isvisible() then
+            awful.tag.viewonly(c:tags()[1])
         end
+        -- This will also un-minimize
+        -- the client, if needed
+        client.focus = c
+        c:raise()
+    end
+end),
+awful.button({ }, 3, function ()
+    if instance then
+        instance:hide()
+        instance = nil
+    else
+        instance = awful.menu.clients({
+            theme = { width = 250 }
+        })
+    end
+end),
+awful.button({ }, 4, function ()
+    awful.client.focus.byidx(1)
+    if client.focus then client.focus:raise() end
+end),
+awful.button({ }, 5, function ()
+    awful.client.focus.byidx(-1)
+    if client.focus then client.focus:raise() end
+end))
+-- }}}
+-- {{{ часы
+mydate_icon = wibox.widget.imagebox()
+mydate_icon:set_image(beautiful.wibox.date)
+
+mydate = wibox.widget.textbox()
+vicious.register(mydate, vicious.widgets.date, markup.b("%a %d %b %H:%M"), 10)
+
+mydate:connect_signal(     "mouse::leave", date.hide )
+mydate_icon:connect_signal("mouse::leave", date.hide )
+local date_control = awful.util.table.join(
+    awful.button({ }, 1, date.show),
+    awful.button({ }, 4,
+    function()
+        date.state.offset = date.state.offset - 1
+        date.update()
     end),
-    awful.button({ }, 3, function ()
-        if instance then
-            instance:hide()
-            instance = nil
-        else
-            instance = awful.menu.clients({ width=250 })
-        end
-    end),
-    awful.button({ }, 4, function ()
-        awful.client.focus.byidx(1)
-        if client.focus then client.focus:raise() end
-    end),
-    awful.button({ }, 5, function ()
-        awful.client.focus.byidx(-1)
-        if client.focus then client.focus:raise() end
+    awful.button({ }, 5,
+    function()
+        date.state.offset = date.state.offset + 1
+        date.update()
     end)
 )
---}}}
+mydate:buttons(date_control)
+mydate_icon:buttons(date_control)
+-- }}}
+-- {{{ звук
+--pulse.step = os.getenv("VOLUME_STEP") or 4
+pulse.step = 1
+local vin, vss
+vin =
+    {
+        mpd = "Music Player Daemon",
+        --mplayer = "MPlayer",
+        --mplayer = "mplayer2",
+        mplayer = "mpv Media Player",
+        flash_plugin = "ALSA plug-in [plugin-container]",
+        radiotray = "radiotray",
+        qemu="qemu-system-x86_64",
+    }
+vss =
+    {
+        headphones = "alsa_output.usb-Logitech_Logitech_Wireless_Headset_000D44D39CAA-00-Headset.analog-stereo",
+        speakers   = "alsa_output.pci-0000_00_1b.0.analog-stereo",
+    }
+volume =
+    {
+        sinks  = pulse.sinks({vss.headphones, vss.speakers}),
+        inputs = pulse.inputs({vin.mpd, vin.mplayer, vin.flash_plugin, vin.radiotray, vin.qemu})
+    }
+volume.update_sinks = function()
+    pulse.update_sinks(volume.sinks, function(s) return string.format(markup.b("%s"), s) end)
+end
+volume.update_inputs = function()
+    pulse.update_inputs(volume.inputs, function(s) return string.format(markup.b("%s"), s) end)
+end
+volume.update_all = function()
+    volume.update_sinks()
+    volume.update_inputs()
+end
+volume.update_all()
+-- }}}
+-- {{{ батарея
+--wake up upowerd
+awful.util.spawn_with_shell('qdbus --system org.freedesktop.UPower 1>/dev/null')
+dbus.add_match("system", "path='/org/freedesktop/UPower/devices/battery_BAT0',member='PropertiesChanged'")
+dbus.add_match("system", "path='/org/freedesktop/UPower/devices/line_power_AC',member='PropertiesChanged'")
 
---{{{ часы
-mydate_icon = widget({type = "imagebox"})
-mydate_icon.image = image(beautiful.wibox_date)
-
-mydate = widget({ type = "textbox" })
-vicious.register(mydate, vicious.widgets.date, '<span fgcolor="#8888ff">'.."%a %d %b %H:%M"..'</span>')
-
---    mydate:add_signal("mouse::enter", function() add_calendar(0) end)
-mydate:add_signal("mouse::leave", remove_calendar )
-
-mydate:buttons(awful.util.table.join(
-    awful.button({ }, 1, function() add_calendar(0) end),
-    awful.button({ }, 4, function() if calendar ~= nil then add_calendar(-1) end end),
-    awful.button({ }, 5, function() if calendar ~= nil then add_calendar(1)  end end)
-))
---}}}
-
---{{{ звук
-myvolume_icon = widget({type = "imagebox"})
-myvolume_icon.image = image(beautiful.wibox_volume)
-
-myvolume = widget({ type = "textbox" })
-vicious.register(myvolume, vicious.widgets.volume,
-    function(widget, args)
-        if (args.mute) then
-            myvolume_icon.image = image(beautiful.wibox_novolume)
-            return ''
-        else
-            myvolume_icon.image = image(beautiful.wibox_volume)
-            return '<span fgcolor="#8888ff">'..args.volume..'%</span>'
-        end
-    end,
-10, "Master")
-
-local volume_control = awful.util.table.join(
-    awful.button({ }, 1, function()
-        os.execute('amixer -c 0 -- sset Master toggle')
-        vicious.force({myvolume})
-    end),
-    awful.button({ }, 4, function()
-        os.execute('amixer -c 0 -- sset Master 3%+')
-        vicious.force({myvolume})
-    end),
-    awful.button({ }, 5, function()
-        os.execute('amixer -c 0 -- sset Master 3%-')
-        vicious.force({myvolume})
-    end)
-)
-myvolume:buttons(volume_control)
-myvolume_icon:buttons(volume_control)
---}}}
-
---{{{ батарея
-mybat_icon = widget({type = "imagebox"})
-mybat_icon.image = image(beautiful.wibox_bat)
-
-mybat = widget({ type = "textbox" })
+mybat_icon = cosy.widget.img()
+mybat_icon.image = beautiful.wibox.battery["missing"]
+mybat_separator = cosy.widget.img()
+mybat_separator.image = beautiful.wibox.separator
+mybat = cosy.widget.txt()
 vicious.register(mybat, vicious.widgets.bat,
     function (widget, args)
-        local perc_color = "#88ff88"
-        if ( args[1] == '↯' or args[1] == '⌁' ) then -- заряжено
-            return '<span fgcolor="#ffff88">'..args[1]..'</span>'
+        local sign, level = args[1], args[2]
+
+        if     (sign == '↯') then -- заряжено
+            mybat_icon.visible      = false
+            mybat.visible           = false
+            mybat_separator.visible = false
         else
-            if ( args[1] == '-' ) then args[1] = '–' end -- минус маленький U2013
-            if ( args[2] < 30 ) then
-                perc_color = "#ffff88"
-            elseif ( args[2] < 10 ) then
-                perc_color = "#ff8888"
+            if     (sign == '⌁') then -- неизвестно
+                mybat_icon.image = beautiful.wibox.battery["missing"]
+            elseif (sign == '-' or sign == '+') then
+                local suf = ''
+                if (sign == '+') then suf = '_c' end
+                if     (level == 100) then
+                    mybat_icon.image = beautiful.wibox.battery["100"..suf]
+                elseif (level > 80 and level < 100) then
+                    mybat_icon.image = beautiful.wibox.battery["080"..suf]
+                elseif (level > 60 and level <= 80) then
+                    mybat_icon.image = beautiful.wibox.battery["060"..suf]
+                elseif (level > 40 and level <= 60) then
+                    mybat_icon.image = beautiful.wibox.battery["040"..suf]
+                elseif (level > 20 and level <= 40) then
+                    mybat_icon.image = beautiful.wibox.battery["020"..suf]
+                elseif (               level <= 20) then
+                    mybat_icon.image = beautiful.wibox.battery["000"..suf]
+                end
             end
-            return '<span fgcolor="#ffff88">'..args[1]..'</span> <span fgcolor="'..perc_color..'">'..args[2]..'%</span>'
+            mybat_icon.visible      = true
+            mybat.visible           = true
+            mybat_separator.visible = true
         end
+
+        local perc_color = "#88ff88"
+        local warn_level = 40
+        local crit_level = 20
+        if (level > crit_level and level <= warn_level) then
+            perc_color = "#ffff88"
+        elseif (level <= crit_level) then
+            perc_color = "#ff8888"
+        end
+        local text = markup(perc_color, level..'%')
+        --if ( sign == '-' ) then sign = '–' end -- минус маленький U2013
+        --local text = markup.y(sign) .. markup(perc_color, level..'%')
+        return text
     end,
-3, "BAT0")
---}}}
+0, "BAT0")
+dbus.connect_signal("org.freedesktop.DBus.Properties",
+function(...)
+    local data = {...}
+    if (data[2] ~= "org.freedesktop.UPower.Device") then return end
+    vicious.force({mybat})
+end)
+vicious.force({mybat})
+-- }}}
+-- {{{ rss liferea
+myrss_icon       = cosy.widget.img()
+myrss_icon.image = beautiful.wibox.rss
+myrss_separator       = cosy.widget.img()
+myrss_separator.image = beautiful.wibox.separator
+myrss = cosy.widget.txt()
 
---{{{ температура
-mythermal_icon = widget({type = "imagebox"})
-mythermal_icon.image = image(beautiful.wibox_thermal)
+local update_rss = function(unread, new)
+    myrss.text = markup("#aaaaff", unread)
+    if ( unread == 0 ) then
+        myrss_icon.visible      = false
+        myrss.visible           = false
+        myrss_separator.visible = false
+    else
+        myrss_icon.visible      = true
+        myrss.visible           = true
+        myrss_separator.visible = true
+    end
+end
 
-mythermal = widget({ type = "textbox" })
-vicious.register(mythermal, vicious.widgets.thermal,
+dbus.add_match("session", "interface='org.gnome.feed.Reader',member='ItemsChanged'")
+dbus.connect_signal("org.gnome.feed.Reader",
+function(...)
+    local data = {...}
+    local sender = data[1]
+    local state  = data[2]
+    update_rss(state.Unread, state.New)
+end)
+-- can't wait first event after initializing awesome
+update_rss(
+   tonumber(awful.util.pread('qdbus org.gnome.feed.Reader /org/gnome/feed/Reader org.gnome.feed.Reader.GetUnreadItems 2>/dev/null')) or 0,
+   tonumber(awful.util.pread('qdbus org.gnome.feed.Reader /org/gnome/feed/Reader org.gnome.feed.Reader.GetNewItems    2>/dev/null')) or 0
+)
+-- }}}
+-- {{{ температура
+my_cpu_icon = wibox.widget.imagebox()
+my_cpu_icon:set_image(beautiful.wibox.cpu)
+mythermal_cpu = wibox.widget.textbox()
+vicious.register(mythermal_cpu, vicious.widgets.thermal,
 function (widget, args)
+    local t = math.ceil(args[1])
     local therm_color = "#88ff88"
-    if ( args[1] > 75 ) then
+    if ( t >= 79 ) then
         therm_color = "#ff8888"
-    elseif ( args[1] > 65 ) then
+    elseif ( t >= 70 ) then
         therm_color = "#ffff88"
     end
-    return '<span fgcolor="'..therm_color..'">'..args[1]..'°</span>'
+    return markup(therm_color, t..'°')
 end,
-10, "thermal_zone0", "sys")
---}}}
+5, "thermal_zone0", "sys")
 
---{{{ память, диски
-mymem_icon = widget({type = "imagebox"})
-mymem_icon.image = image(beautiful.wibox_mem)
+mythermal_hdd_icon = wibox.widget.imagebox()
+mythermal_hdd_icon:set_image(beautiful.wibox.hdd)
+mythermal_hdd = wibox.widget.textbox()
+vicious.register(mythermal_hdd, vicious.widgets.hddtemp,
+function (widget, args)
+    local t = args["{/dev/sda}"]
+    if (t == nil) then return markup.y("?") end
+    local therm_color = "#88ff88"
+    if ( t >= 50 ) then
+        therm_color = "#ff8888"
+    elseif ( t >= 55 ) then
+        therm_color = "#ffff88"
+    end
+    return markup(therm_color, t..'°')
+end,
+10, 7634)
+-- }}}
+-- {{{ память, диски
+mymem_icon = wibox.widget.imagebox()
+mymem_icon:set_image(beautiful.wibox.mem)
 
-mymem = widget({ type = "textbox" })
+mymem = wibox.widget.textbox()
 vicious.register(mymem, vicious.widgets.mem,
 function (widget, args)
-    local mem, swp = '<span fgcolor="#8888ff">'..args[1]..'%</span>', ''
-    if (args[5] ~= 0) then swp = ' <span fgcolor="#ff8888">'..args[5]..'%</span>' end
+    local mem, swp = markup.b(args[1]..'%'), ''
+    if (args[5] ~= 0) then swp = markup.c(' '..args[5]..'%') end
     return mem..swp
 end,
 10)
 
-mymem:add_signal("mouse::leave", remove_check_disks_free )
-mymem_icon:add_signal("mouse::leave", remove_check_disks_free )
+mymem:connect_signal(     "mouse::leave", disks.hide )
+mymem_icon:connect_signal("mouse::leave", disks.hide )
 
-local disks_free_control = awful.util.table.join(
-    awful.button({ }, 1, function() add_disks_free() end)
+local disks_control = awful.util.table.join(
+    awful.button({ }, 1, disks.show)
 )
 
-mymem:buttons(disks_free_control)
-mymem_icon:buttons(disks_free_control)
---}}}
+mymem:buttons(disks_control)
+mymem_icon:buttons(disks_control)
+-- }}}
+-- {{{ mpd
+mympd_icon = wibox.widget.imagebox()
+mympd_icon:set_image(beautiful.wibox.mpd.music)
 
---{{{ mpd
-mympd_icon = widget({type = "imagebox"})
-mympd_icon.image = image(beautiful.wibox_mpd)
-
-mympd = widget({ type = "textbox" })
+mympd = wibox.widget.textbox()
 vicious.register(mympd, vicious.widgets.mpd,
-function (widget, args)
-    local color_title = "#ff8888"
-    if args["{random}"] == 1 then
-        color_title = "#88ff88"
-    end
-    if args["{state}"] == "Stop" then
-        return '<span fgcolor="#00bbbb">stoped</span>'
-    elseif args["{state}"] == "Pause" then
-        return '<span fgcolor="#00bbbb">paused</span>'
-    else
-        local artist, title, name, file = args["{Artist}"], args["{Title}"], args["{Name}"], args["{file}"]
-        if (name == 'N/A')   then name = nil            end
-        if (artist == 'N/A') then artist = ''           end
-        if (title == 'N/A')  then title  = name or string.gsub(file, ".*/([^/]*)", "%1") end
-        if (file:match('^http://')) then
-            local f  = io.popen("echo '"..title.."'|iconv -t LATIN1|iconv -f CP1251")
-            local tc = f:read("*a")
-            f:close()
-            artist = 'radio'
-            title = tc or title
+    function (widget, args)
+        if args["{state}"] == "Stop" then
+            mympd_icon:set_image(beautiful.wibox.mpd.stop)
+            return ''
+        elseif args["{state}"] == "Pause" then
+            mympd_icon:set_image(beautiful.wibox.mpd.pause)
+            return ''
+        else
+            local color_title = "#ff8888"
+            if args["{random}"] == 1 then color_title = "#88ff88" end
+            mympd_icon:set_image(beautiful.wibox.mpd.play)
+            return markup("#00bbbb", args["{Artist}"])..' '..markup(color_title, args["{Title}"])
         end
-        return  '<span fgcolor="#00bbbb">'..artist..'</span>'..' '..
-                '<span fgcolor="'..color_title..'">'..title..'</span>'
-    end
-end, 10)
+    end, 0) -- 0 is good since mpdcron is been used
+vicious.force({mympd})
+
 local mpd_control = awful.util.table.join(
     awful.button({ }, 1, function()
-        os.execute("mpc toggle")
-        vicious.force({mympd})
+        awful.util.spawn("mpc toggle")
+        -- no need in explicit forcing of vicious widget's update since using mpdcron
+        --vicious.force({mympd})
     end),
     awful.button({ }, 3, function()
-        os.execute("mpc random")
-        vicious.force({mympd})
+        awful.util.spawn("mpc random")
     end),
     awful.button({ }, 4, function()
-        os.execute("mpc prev")
-        vicious.force({mympd})
+        awful.util.spawn("mpc prev")
     end),
     awful.button({ }, 5, function()
-        os.execute("mpc next")
-        vicious.force({mympd})
+        awful.util.spawn("mpc next")
     end)
 )
 mympd:buttons(mpd_control)
 mympd_icon:buttons(mpd_control)
---}}}
+-- }}}
+-- {{{ сеть
+nm_widget = cosy.widget.txt()
+nm_icon = wibox.widget.imagebox()
+nm_icon:set_image(beautiful.wibox.net.nm["none"])
 
---{{{ сеть
-mynet_icon_up = widget({type = "imagebox"})
-mynet_icon_up.image = image(beautiful.wibox_net_up)
-mynet_icon_down = widget({type = "imagebox"})
-mynet_icon_down.image = image(beautiful.wibox_net_down)
+net_icon_up   = cosy.widget.img()
+net_icon_down = cosy.widget.img()
+net_icon_up.image   = beautiful.wibox.net.up
+net_icon_down.image = beautiful.wibox.net.down
+mynet = cosy.widget.txt()
 
-mynet = widget({ type = "textbox" })
+local round_net = function(num)
+    local num = tonumber(num)
+    if ((num < 1) and (num > 0)) then return 1 end
+    return math.floor(num + 0.5)
+end
 vicious.register(mynet, vicious.widgets.net,
 function (widget, args)
-    local up_color = "#88ff88"
+    local up_color   = "#88ff88"
     local down_color = "#ff8888"
-    return '<span fgcolor="'..down_color..'">'..args["{wlan0 down_kb}"]..'</span> <span fgcolor="'..up_color..'">'..args["{wlan0 up_kb}"]..'</span>'
+    local up_speed   = round_net(args["{wlan0 up_kb}"])
+    local down_speed = round_net(args["{wlan0 down_kb}"])
+    return markup(down_color, down_speed)..' '..markup(up_color, up_speed)
 end,
 5, "wlan0")
---}}}
 
---{{{ deluge
-mydeluge_icon = widget({type = "imagebox"})
-mydeluge_icon.image = image(beautiful.wibox_deluge)
-
-mydeluge = widget({ type = "textbox" })
-vicious.register(mydeluge, vicious.widgets.deluge,
-function (widget, args)
-    local down_color = "#88ff88"
-    local up_color = "#ff8888"
-    if (args.max_active_seeding == 0) and (args.max_active_downloading == 0) then
-        return '<span fgcolor="#ff8888">off</span>'
+-- I guess we can only connect to signal through awesome api
+-- so we'll use perl script to ask properties, although it's quite ugly decision
+-- normally it won't be called too often
+-- we'll have `nm_ac' name string and `nm_ac_table' properties
+local get_ap = function(i)
+    local f = io.popen(awful.util.getdir("config").."/bin/nm-perl.pl")
+    if f then
+       local pl = f:read("*a")
+       f:close()
+       local func, err = loadstring(pl)
+       if func then
+          func()
+       else
+          nm_ac       = nil
+          nm_ac_table = nil
+       end
     else
-        return '<span fgcolor="#88ff88">on</span>'
+       nm_ac       = nil
+       nm_ac_table = nil
     end
-end,
-3600)
+end
 
-mydeluge:add_signal(        "mouse::leave", remove_check_deluge)
-mydeluge_icon:add_signal(   "mouse::leave", remove_check_deluge)
+dbus.add_match("system", "interface='org.freedesktop.NetworkManager',member='StateChanged'")
+dbus.add_match("system", "interface='org.freedesktop.NetworkManager.AccessPoint',member='PropertiesChanged'")
 
-local deluge_control = awful.util.table.join(
-    awful.button({ }, 1, function() add_deluge() end),
-    awful.button({ }, 2, function() os.execute("delugecontrol -c") vicious.force({mydeluge}) end),
-    awful.button({ }, 3, function() remove_check_deluge() awful.util.spawn("deluge-gtk") end)
-)
-mydeluge:buttons(deluge_control)
-mydeluge_icon:buttons(deluge_control)
---}}}
+local function nm_update_widget()
+    if (nm_ac == nil or nm_ac_table == nil) then
+        net_icon_up.visible   = false
+        net_icon_down.visible = false
+        mynet.visible         = false
+        nm_widget.visible     = false
+        nm_icon:set_image(beautiful.wibox.net.nm["none"])
+    else
+        local s = tonumber(nm_ac_table.Strength)
+        local c
+        if s < 25 then
+            c = "#ff8888" -- bad
+            nm_icon:set_image(beautiful.wibox.net.nm["00"])
+        elseif s < 50 then
+            c = "#ffff88" -- quite bad
+            nm_icon:set_image(beautiful.wibox.net.nm["25"])
+        elseif s < 75 then
+            c = "#88cc88" -- medium
+            nm_icon:set_image(beautiful.wibox.net.nm["50"])
+        elseif s < 100 then
+            c = "#88ff88" -- good
+            nm_icon:set_image(beautiful.wibox.net.nm["75"])
+        else
+            c = "#88ff88" -- good
+            nm_icon:set_image(beautiful.wibox.net.nm["100"])
+        end
+        net_icon_up.visible   = true
+        net_icon_down.visible = true
+        mynet.visible         = true
+        nm_widget.text = markup.c(nm_ac_table.Ssid)..' '..markup(c, nm_ac_table.Strength..'%')
+        nm_widget.visible     = true
+    end
+end
 
+dbus.connect_signal("org.freedesktop.NetworkManager.AccessPoint",
+function(...)
+    local data = {...}
+    local sender = data[1]
+    local state  = data[2]
+    if (nm_ac and nm_ac == sender["path"]) then
+        for k,v in pairs(data[2]) do
+            v = (k == "Strength") and string.byte(v) or v
+            nm_ac_table[k] = v
+        end
+        nm_update_widget()
+    end
+end)
+
+-- can't wait first event after initializing awesome
+get_ap()
+nm_update_widget()
+
+dbus.connect_signal("org.freedesktop.NetworkManager",
+function(...)
+    local data = {...}
+    local state = data[2]
+    if (state ~= 70) then
+        nm_ac = nil
+        nm_ac_table = nil
+    else
+        get_ap()
+    end
+    nm_update_widget()
+end)
+-- }}}
+mypromptbox = {}
+mylayoutbox = {}
 for s = 1, screen.count() do
---{{{ promptbox, layoutbox, tablist tasklist
-mypromptbox[s] = awful.widget.prompt({ layout = awful.widget.layout.horizontal.leftright })
+-- set wallpaper
+gears.wallpaper.maximized(beautiful.wallpaper, s, true)
+-- {{{ promptbox, layoutbox, tablist tasklist
+mypromptbox[s] = awful.widget.prompt()
 mylayoutbox[s] = awful.widget.layoutbox(s)
 mylayoutbox[s]:buttons(awful.util.table.join(
     awful.button({ }, 1, function () awful.layout.inc(layouts, 1) end),
@@ -640,77 +846,95 @@ mylayoutbox[s]:buttons(awful.util.table.join(
     awful.button({ }, 4, function () awful.layout.inc(layouts, 1) end),
     awful.button({ }, 5, function () awful.layout.inc(layouts, -1) end)
 ))
-mytaglist[s] = awful.widget.taglist(s, awful.widget.taglist.label.all, mytaglist.buttons)
-mytasklist[s] = awful.widget.tasklist(
-    function(c) return awful.widget.tasklist.label.currenttags(c, s) end,
-    mytasklist.buttons
-)
---}}}
+mytaglist[s]  = awful.widget.taglist( s, awful.widget.taglist.filter.all,          mytaglist.buttons)
+mytasklist[s] = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, mytasklist.buttons)
+-- }}}
+-- {{{ создание панели
+mywibox[s] = awful.wibox({ position = "top", screen = s, height = beautiful.main_wibox_height })
 
---{{{ создание панели
-mywibox[s] = awful.wibox({ position = "top", screen = s, height = 38 })
-mywibox[s].widgets = {
-    {-- верх
-        {-- верх слева
+local layout              = wibox.layout.flex.vertical()
+local top_layout          = wibox.layout.align.horizontal()
+local top_right_layout    = wibox.layout.fixed.horizontal()
+local top_left_layout     = wibox.layout.fixed.horizontal()
+local bottom_layout       = wibox.layout.align.horizontal()
+local bottom_right_layout = wibox.layout.fixed.horizontal()
+local bottom_left_layout  = wibox.layout.fixed.horizontal()
+
+local mywidgets = {
+    [top_layout] = {-- верх
+        [top_left_layout] = {-- верх слева
             mylauncher,
             mytaglist[s],
+        },
+        [top_right_layout] = {-- верх справа
+        separator,
+        nm_icon, net_icon_down, mynet, net_icon_up, nm_widget, separator,
+        mymem_icon, mymem, separator,
+        myrss_icon, myrss, myrss_separator,
+        my_cpu_icon, mythermal_cpu, mythermal_hdd_icon, mythermal_hdd, separator,
+        mybat_icon, mybat, mybat_separator,
+        volume.inputs[vin.qemu].imagebox,     volume.inputs[vin.qemu].textbox,          volume.inputs[vin.radiotray].imagebox,
+        volume.inputs[vin.radiotray].textbox, volume.inputs[vin.flash_plugin].imagebox, volume.inputs[vin.flash_plugin].textbox,
+        volume.inputs[vin.mplayer].imagebox,  volume.inputs[vin.mplayer].textbox,       volume.inputs[vin.mpd].imagebox,
+        volume.inputs[vin.mpd].textbox,       separator,
+        volume.sinks[vss.speakers].imagebox,   volume.sinks[vss.speakers].textbox,   separator,
+        volume.sinks[vss.headphones].imagebox, volume.sinks[vss.headphones].textbox, separator,
+        mydate_icon, mydate, separator,
+        s == 1 and systray_layout or nil,
+        mylayoutbox[s],
+        },
+    },
+    [bottom_layout] = {-- низ
+        [bottom_left_layout] = {-- низ слева
             mypromptbox[s],
-            layout = awful.widget.layout.horizontal.leftright,
-        },
-        {-- верх справа
-            mylayoutbox[s],
-            s == 1 and mysystray or nil,
-            separator, mydate, mydate_icon,
-            separator, myvolume, myvolume_icon,
-            separator, kbdwidget,
-            separator, mydeluge, mydeluge_icon,
-            separator, mybat, mybat_icon,
-            separator, mythermal, mythermal_icon,
-            separator, mymem, mymem_icon,
-            separator, mynet_icon_up, mynet, mynet_icon_down,
-            separator, mympd, mympd_icon,
-            layout = awful.widget.layout.horizontal.rightleft,
-        },
-    },
-    {-- низ
-        {-- низ слева
-            layout = awful.widget.layout.horizontal.leftright,
-        },
-        {-- низ справа
             mytasklist[s],
-            layout = awful.widget.layout.horizontal.leftright,
+        },
+        [bottom_right_layout] = {-- низ справа
+            mympd_icon, mympd,
         },
     },
-    layout = awful.widget.layout.vertical.flex,
-    }
---}}}
+}
+for _, a in pairs(mywidgets) do
+    for k, b in pairs(a) do
+        for _, v in pairs(b) do
+            if (v) then k:add(v) end
+        end
+    end
 end
--- }}}
+top_layout:set_right(top_right_layout)
+top_layout:set_left(top_left_layout)
 
+bottom_layout:set_middle(bottom_left_layout)
+bottom_layout:set_right(bottom_right_layout)
+
+layout:add(top_layout)
+layout:add(bottom_layout)
+mywibox[s]:set_widget(layout)
+-- }}}
+end
+-- }}}}}} Wibox
 -- {{{ global mouse buttons
 root.buttons(awful.util.table.join(
-    awful.button({ }, 3, function () mymainmenu:toggle() end),
+    awful.button({ }, 3, function () mymainmenu:show() end),
     awful.button({ }, 4, awful.tag.viewnext),
     awful.button({ }, 5, awful.tag.viewprev)
 ))
 -- }}}
-
 -- {{{ clientbuttons
 clientbuttons = awful.util.table.join(
     awful.button({ }, 1, function (c) client.focus = c; c:raise() end),
     awful.button({ modkey }, 1, awful.mouse.client.move),
     awful.button({ modkey }, 3, awful.mouse.client.resize)
 )
---}}}
-
+-- }}}
 -- {{{ clientkeys
 clientkeys = awful.util.table.join(
-    awful.key({ modkey,           }, "f",      function (c) c.fullscreen = not c.fullscreen  end),
-    awful.key({ modkey,           }, "d",      function (c) c:kill()                         end),
-    awful.key({ modkey, "Control" }, "space",  awful.client.floating.toggle                     ),
-    awful.key({ modkey, "Control" }, "Return", function (c) c:swap(awful.client.getmaster()) end),
-    awful.key({ modkey, "Shift"   }, "r",      function (c) c:redraw()                       end),
-    awful.key({ modkey,           }, "t",      function (c) c.ontop = not c.ontop            end),
+    awful.key({ modkey,           }, "f",         function (c) c.fullscreen = not c.fullscreen  end),
+    awful.key({ modkey,           }, "d",         function (c) c:kill()                         end),
+    awful.key({ modkey, "Control" }, "backslash", awful.client.floating.toggle                     ),
+    awful.key({ modkey, "Control" }, "Return",    function (c) c:swap(awful.client.getmaster()) end),
+    awful.key({ modkey, "Shift"   }, "r",         function (c) c:redraw()                       end),
+    awful.key({ modkey,           }, "t",         function (c) c.ontop = not c.ontop            end),
     awful.key({ modkey,           }, "n",
     function (c)
         -- The client currently has the input focus, so it cannot be
@@ -725,36 +949,28 @@ clientkeys = awful.util.table.join(
 )
 shifty.config.clientkeys = clientkeys
 -- }}}
-
 -- {{{ rules
 awful.rules.rules = {
     -- All clients will match this rule.
-    { rule = { },
-    properties = {
-        border_width = beautiful.border_width,
-        border_color = beautiful.border_normal,
-        focus = true,
-        keys = clientkeys,
-        buttons = clientbuttons }
+    {
+        rule = {},
+        properties = {
+            border_width = beautiful.border_width,
+            border_color = beautiful.border_normal,
+            focus        = true,
+            keys         = clientkeys,
+            buttons      = clientbuttons
+        }
     },
 }
 -- }}}
-
--- {{{ globalkeys
+-- {{{{{{ globalkeys
 globalkeys = awful.util.table.join(
-    awful.key({ modkey }, "s", function () mywibox[mouse.screen].visible = not mywibox[mouse.screen].visible end),
-
-    awful.key({                   }, "Print",  nil),
-
-    awful.key({modkey, "Control"  }, "k",      function() awful.util.spawn("xkill") end),
-
-    awful.key({ modkey,           }, "Left",   awful.tag.viewprev       ),
-    awful.key({ modkey,           }, "Right",  awful.tag.viewnext       ),
-    awful.key({ modkey,           }, "j",      awful.tag.viewprev       ),
-    awful.key({ modkey,           }, "k",      awful.tag.viewnext       ),
-    awful.key({ modkey,           }, "w",      awful.tag.history.restore),
-    awful.key({ modkey,           }, "e",      awful.tag.history.restore),
-
+    awful.key({ modkey,           }, "s",      mywibox.toggle),
+    awful.key({ modkey, "Shift"   }, "s",      systray.toggle),
+    awful.key({ modkey, "Control" }, "k",      function () awful.util.spawn("xkill") end),
+    awful.key({ modkey,           }, "Escape", function () mymainmenu:show({keygrabber=true}) end),
+-- {{{ layout and client
     awful.key({ modkey,           }, ".",
     function ()
         awful.client.focus.byidx( 1)
@@ -765,37 +981,22 @@ globalkeys = awful.util.table.join(
         awful.client.focus.byidx(-1)
         if client.focus then client.focus:raise() end
     end),
-        awful.key({ modkey,           }, "Escape", function () mymainmenu:show({keygrabber=true}) end),
-
-    -- Layout manipulation
-    awful.key({ modkey, "Shift"   }, ".", function () awful.client.swap.byidx(  1)    end),
-    awful.key({ modkey, "Shift"   }, ",", function () awful.client.swap.byidx( -1)    end),
-    awful.key({ modkey, "Control" }, ".", function () awful.screen.focus_relative( 1) end),
-    awful.key({ modkey, "Control" }, ",", function () awful.screen.focus_relative(-1) end),
-    awful.key({ modkey,           }, "u", awful.client.urgent.jumpto),
     awful.key({ modkey,           }, "Tab",
     function ()
         awful.client.focus.history.previous()
-        if client.focus then
-            client.focus:raise()
-        end
+        if client.focus then client.focus:raise() end
     end),
+    awful.key({ modkey, "Control" }, "n", awful.client.restore),
 
-    -- Standard programs
-    awful.key({ modkey,           }, "Return", function () awful.util.spawn(terminal) end),
-    awful.key({ modkey, "Control" }, "r", awesome.restart),
-    awful.key({ modkey, "Shift"   }, "q", awesome.quit),
-
-    awful.key({ modkey,           }, "l",     function () awful.tag.incmwfact( 0.05)    end),
-    awful.key({ modkey,           }, "h",     function () awful.tag.incmwfact(-0.05)    end),
-    awful.key({ modkey, "Shift"   }, "h",     function () awful.tag.incnmaster( 1)      end),
-    awful.key({ modkey, "Shift"   }, "l",     function () awful.tag.incnmaster(-1)      end),
-    awful.key({ modkey, "Control" }, "h",     function () awful.tag.incncol( 1)         end),
-    awful.key({ modkey, "Control" }, "l",     function () awful.tag.incncol(-1)         end),
+    awful.key({ modkey, "Shift"   }, ".",         function () awful.client.swap.byidx(  1)    end),
+    awful.key({ modkey, "Shift"   }, ",",         function () awful.client.swap.byidx( -1)    end),
+    awful.key({ modkey, "Control" }, ".",         function () awful.screen.focus_relative( 1) end),
+    awful.key({ modkey, "Control" }, ",",         function () awful.screen.focus_relative(-1) end),
+    awful.key({ modkey,           }, "u",         awful.client.urgent.jumpto),
     awful.key({ modkey,           }, "BackSpace", function () awful.layout.inc(layouts,  1) end),
     awful.key({ modkey, "Shift"   }, "BackSpace", function () awful.layout.inc(layouts, -1) end),
     awful.key({ modkey, "Control" }, "BackSpace", function () awful.layout.set(shifty.config.tags[awful.tag.selected().name].layout) end),
-    awful.key({ modkey,           }, "space",
+    awful.key({ modkey,           }, "backslash",
     function ()
         local cl = awful.layout.get(mouse.screen)
         if (cl == als.tile.top) then
@@ -804,13 +1005,35 @@ globalkeys = awful.util.table.join(
             awful.layout.set(als.tile.top)
         end
     end),
-
-    awful.key({ modkey, "Control" }, "n", awful.client.restore),
-
-    -- Prompt
+-- }}}
+-- {{{ Standard programs
+    awful.key({ modkey,           }, "Return", function () awful.util.spawn(terminal) end),
+    awful.key({ modkey, "Control" }, "r",      awesome.restart),
+    awful.key({ modkey, "Shift"   }, "q",      awesome.quit),
+-- }}}
+-- {{{ tags
+    awful.key({ modkey,           }, "l",     function () awful.tag.incmwfact( 0.05) end),
+    awful.key({ modkey,           }, "h",     function () awful.tag.incmwfact(-0.05) end),
+    awful.key({ modkey, "Shift"   }, "h",     function () awful.tag.incnmaster( 1)   end),
+    awful.key({ modkey, "Shift"   }, "l",     function () awful.tag.incnmaster(-1)   end),
+    awful.key({ modkey, "Control" }, "h",     function () awful.tag.incncol( 1)      end),
+    awful.key({ modkey, "Control" }, "l",     function () awful.tag.incncol(-1)      end),
+    awful.key({ modkey,           }, "Left",  awful.tag.viewprev),
+    awful.key({ modkey,           }, "Right", awful.tag.viewnext),
+    awful.key({ modkey,           }, "j",     awful.tag.viewprev),
+    awful.key({ modkey,           }, "k",     awful.tag.viewnext),
+    awful.key({ modkey,           }, "w",     awful.tag.history.restore),
+-- }}}
+-- {{{ Prompts
     awful.key({ modkey }, "r",
     function ()
-        awful.prompt.run({ prompt = "Run: " },
+        awful.prompt.run(
+        {
+            prompt    = markup.bg("#88ffff", markup.d("Run: ")),
+            font      = theme.font12,
+            fg_cursor = "black",
+            bg_cursor = "cyan",
+        },
         mypromptbox[mouse.screen].widget,
         awful.util.spawn, awful.completion.shell,
         awful.util.getdir("cache") .. "/history")
@@ -818,68 +1041,92 @@ globalkeys = awful.util.table.join(
 
     awful.key({ modkey }, "x",
     function ()
-        awful.prompt.run({ prompt = "Run Lua code: " },
+        awful.prompt.run(
+        {
+            prompt    = markup.bg("#88ffff", markup.d("Run Lua code: ")),
+            font      = theme.font12,
+            fg_cursor = "black",
+            bg_cursor = "cyan",
+        },
         mypromptbox[mouse.screen].widget,
         awful.util.eval, nil,
         awful.util.getdir("cache") .. "/history_eval")
     end),
-
-    awful.key({ modkey }, "c",
-    function ()
-        awful.prompt.run({ prompt = "перевод: " },
-        mypromptbox[mouse.screen].widget,
-        function (expr)
-            add_sdcv(expr)
-        end, nil,
-        awful.util.getdir("cache") .. "/translate")
-    end),
-
-    awful.key({ modkey }, "g", add_weather),
-    awful.key({ modkey }, "y", add_deluge)
-
-)
 -- }}}
-
+-- {{{ infoboxes
+    awful.key({ modkey, }, "z",
+    function()
+        slovnik.state.style = awful.util.table.clone(slovnik.style)
+        slovnik.state.word  = selection():gsub("^([^\n]*)\n.*", "%1"):gsub("^(%s+)", ""):gsub("<", "«"):gsub(">", "»")
+        slovnik.toggle()
+    end),
+    awful.key({ modkey, }, "g", gismeteo.toggle)
+-- }}}
+)
 -- {{{ tag_keys для shifty
 local function tags_keys(i, p)
-    globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey }, i,
-    function ()
-        local t = awful.tag.viewonly(shifty.getpos(p))
-    end))
-    globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey, "Control" }, i,
-    function ()
-        local t = shifty.getpos(p)
-        t.selected = not t.selected
-    end))
-    globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey, "Control", "Shift" }, i,
-    function ()
-        if client.focus then
-            awful.client.toggletag(shifty.getpos(p))
-        end
-    end))
-    -- move clients to other tags
-    globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey, "Shift" }, i,
-    function ()
-        if client.focus then
+    globalkeys = awful.util.table.join(
+        globalkeys,
+        awful.key({ modkey, }, i,
+        function ()
+            local t = awful.tag.viewonly(shifty.getpos(p))
+        end),
+        awful.key({ modkey, "Control" }, i,
+        function ()
             local t = shifty.getpos(p)
-            awful.client.movetotag(t)
-            awful.tag.viewonly(t)
-        end
-    end))
+            t.selected = not t.selected
+        end),
+        awful.key({ modkey, "Control", "Shift" }, i,
+        function ()
+            if client.focus then
+                awful.client.toggletag(shifty.getpos(p))
+            end
+        end),
+        -- move clients to other tags
+        awful.key({ modkey, "Shift" }, i,
+        function ()
+            if client.focus then
+                local t = shifty.getpos(p)
+                awful.client.movetotag(t)
+                awful.tag.viewonly(t)
+            end
+        end)
+    )
 end
 for i=1,9 do
     tags_keys(i, i)
 end
-tags_keys(0, 10)
+tags_keys(0  , 10)
 tags_keys("b", 12)
 tags_keys("i", 13)
-tags_keys("z", 14)
+tags_keys("p", 15)
+tags_keys("c", 17)
+tags_keys("v", 18)
+tags_keys("o", 20)
 -- }}}
-
 root.keys(globalkeys)
 shifty.config.globalkeys = globalkeys
-
+-- }}}}}}
 -- {{{ Signals
+-- Signal function to execute when a new client appears.
+--client.connect_signal("manage", function (c, startup)
+--end)
+--client.connect_signal("focus",   function(c) c.border_color = beautiful.border_focus  end)
+--client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
+client.connect_signal("property::fullscreen",
+function(c)
+    local fullscreened = false
+    for c in awful.client.iterate(function(c) return c.fullscreen end) do
+        fullscreend = true
+        break
+    end
+    if(fullscreened) then
+        awful.util.spawn("xset s off")
+        awful.util.spawn("xset -dpms")
+    else
+        awful.util.spawn("xset s on")
+        awful.util.spawn("xset +dpms")
+    end
+end)
 -- }}}
-
 -- vim: foldmethod=marker:filetype=lua
