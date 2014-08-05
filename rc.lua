@@ -4,8 +4,8 @@ os.setlocale(os.getenv("LANG"))
 
 local awful = require("awful")
 require("awful.autofocus")
-awful.rules      = require("awful.rules")
-local keygrabber = require("awful.keygrabber")
+awful.rules = require("awful.rules")
+keygrabber  = require("awful.keygrabber")
 
 vicious = require("vicious")
 pulse   = require("pulse")
@@ -64,7 +64,7 @@ layouts =
 }
 
 -- java AWT/swing fix
--- наверное, ненужно с кагого-то коммита
+-- наверное, ненужно с какого-то коммита
 --awful.util.spawn("wmname LG3D")
 -- }}}
 -- {{{ shifty
@@ -186,7 +186,7 @@ shifty.config.apps = {
     { match = { class    = {"^Zathura$"              }, }, tag = "9",        },
     { match = { class    = {"^Fbreader$"             }, }, tag = "10",       },
     { match = { class    = {"^Spacefm$"              }, }, tag = "fm",       },
-    { match = { class    = {"^Wuala$", "^Dropbox$"   }, }, tag = "cloud",    },
+    { match = { class    = {"^Dropbox$"              }, }, tag = "cloud",    },
     { match = { instance = {"^htopTerm$"             }, }, tag = "htop",     },
     { match = { instance = {"^logTerm$"              }, }, tag = "log",      },
     { match = { class    = {"^Wine$", "^qemu-.*", "^Spicec$", "^Xephyr$", "^org%-serviio%-console%-ServiioConsole$" },
@@ -1097,6 +1097,7 @@ for i=1,9 do
     tags_keys(i, i)
 end
 tags_keys(0  , 10)
+tags_keys("e", 11)
 tags_keys("b", 12)
 tags_keys("i", 13)
 tags_keys("p", 15)
@@ -1109,24 +1110,8 @@ shifty.config.globalkeys = globalkeys
 -- }}}}}}
 -- {{{ Signals
 -- Signal function to execute when a new client appears.
---client.connect_signal("manage", function (c, startup)
---end)
+--client.connect_signal("manage",  function(c, startup) end)
 --client.connect_signal("focus",   function(c) c.border_color = beautiful.border_focus  end)
 --client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
-client.connect_signal("property::fullscreen",
-function(c)
-    local fullscreened = false
-    for c in awful.client.iterate(function(c) return c.fullscreen end) do
-        fullscreend = true
-        break
-    end
-    if(fullscreened) then
-        awful.util.spawn("xset s off")
-        awful.util.spawn("xset -dpms")
-    else
-        awful.util.spawn("xset s on")
-        awful.util.spawn("xset +dpms")
-    end
-end)
 -- }}}
 -- vim: foldmethod=marker:filetype=lua
