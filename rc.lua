@@ -2,29 +2,45 @@
 io.stderr:write("Starting Awesome WM\n")
 os.setlocale(os.getenv("LANG"))
 
-local awful = require("awful")
+local awful  = require("awful")
 require("awful.autofocus")
-awful.rules = require("awful.rules")
-keygrabber  = require("awful.keygrabber")
+awful.rules  = require("awful.rules")
+awful.common = require("awful.widget.common")
+keygrabber   = require("awful.keygrabber")
 
 vicious = require("vicious")
 pulse   = require("pulse")
 shifty  = require("shifty")
 gears   = require("gears")
+timer   = require("timer")
 naughty = require("naughty")
 naughty.config.icon_dirs = {
     awful.util.getdir("config").."/themes/naughty/",
     "/usr/share/pixmaps/",
     "/usr/share/icons/gnome/16x16/status/",
 }
+--naughty.config.defaults.opacity=0.6
 local wibox     = require("wibox")
 local beautiful = require("beautiful")
 local weather   = require("weather")
-local translate = require("translate")
 
 local cosy      = require("cosy")
 local markup    = cosy.markup
 local infobox   = require("infobox")
+
+local tabs      = require("tabs")
+tabs.styler = function(text, n, c)
+    local fg   = "black"
+    local bg   = "lightcyan"
+    bg = "#338833"
+    fg = "white"
+    local font = "11"
+    --if (client.focus == c) then
+        --bg = "cyan"
+        --fg = "black"
+    --end
+return '<span font_desc="'..font..'" background="'..bg..'" foreground="'..fg..'"> '..n..' </span>'..text
+end
 
 local freedesktop   = {}
 freedesktop.menu    = require('freedesktop.menu')
@@ -46,6 +62,7 @@ modkey = "Mod4"
 
 -- Table of layouts to cover with awful.layout.inc, order matters.
 local als = awful.layout.suit
+als.tabs  = tabs.layout
 layouts =
 {
     als.tile.top,
@@ -64,8 +81,7 @@ layouts =
 }
 
 -- java AWT/swing fix
--- наверное, ненужно с какого-то коммита
---awful.util.spawn("wmname LG3D")
+awful.util.spawn("wmname LG3D")
 -- }}}
 -- {{{ shifty
 shifty.config.defaults = {
@@ -76,7 +92,8 @@ shifty.config.defaults = {
 shifty.config.tags = {
     ["1"] = {
         position = 1, icon = "terminal.png",
-        init = true, exclusive = false, layout = als.tabs,
+        exclusive = true,
+        init = true, layout = als.tabs,
     },
     ["2"] = {
         position = 2, icon = "ff.png", layout = als.tabs,
@@ -84,20 +101,17 @@ shifty.config.tags = {
         spawn = "browser",
     },
     ["3"] = {
-        --position = 3, icon = "eclipse.png",
-        --spawn = "eclipse",
-        --position = 3, icon = "idea.png",
-        --spawn = "idea-11",
         position = 3, icon = "emacs.png",
         layout = als.tabs,
         spawn = editor .. " -c",
     },
     ["4"] = {
         position = 4, icon = "dict.png",
-        spawn = "stardict",
+        spawn = "goldendict",
     },
     ["5"] = {
         position = 5, icon = "mplayer.png",
+        layout = als.tabs,
     },
     ["6"] = {
         position = 6, icon = "deluge.png",
@@ -117,17 +131,21 @@ shifty.config.tags = {
         position = 10,icon = "fbreader.png",
         spawn = "fbreader",
     },
-    ["emul"] = {
-        position = 11, icon = "emul.png",
-        layout = als.floating,
-    },
     ["fm"] = {
-        position = 12, icon = "file.png",
+        position = 11, icon = "file.png",
         spawn = "spacefm",
     },
     ["htop"] = {
-        position = 13, icon = "htop.png",
+        position = 12, icon = "htop.png",
         spawn = terminal.." -name htopTerm -e htop",
+    },
+    ["emul"] = {
+        position = 13, icon = "emul.png",
+        layout = als.fair,
+    },
+    ["dev"] = {
+        position = 14, icon = "gear.png",
+        layout = als.tabs,
     },
     ["im"] = {
         position = 15, icon = "im.png",
@@ -135,7 +153,6 @@ shifty.config.tags = {
         nmaster  = 1,
         ncol     = 1,
         layout   = als.tile.left,
-        --spawn    = "pidgin",
     },
     ["rss"] = {
         position = 17, icon = "rss.png",
@@ -145,8 +162,8 @@ shifty.config.tags = {
         position = 18, icon = "logview.png",
         spawn = terminal.." -cr black -rv -name logTerm -e /bin/sh -c '/usr/bin/journalctl -b -n 39 -f | ccze -A -m ansi'",
     },
-    ["cloud"] = {
-        position = 20, icon = "dropbox.png",
+    ["mw"] = {
+        position = 20, icon = "openmw.png",
     },
 }
 for k, v in pairs(shifty.config.tags) do
@@ -168,17 +185,15 @@ shifty.config.apps = {
     { match = { class    = {"^luakit$"               }, }, tag = "2",        },
     { match = { class    = {"^Uzbl.*$"               }, }, tag = "2",        },
     { match = { class    = {"^Dwb$"                  }, }, tag = "2",        },
-    { match = { name     = {".*IntelliJ IDEA.*"      }, }, tag = "3",        },
-    { match = { instance = {"^jetbrains%-idea$"      }, }, tag = "3",        },
-    { match = { class    = {"^sun%-awt%-X11%-.*"     }, }, tag = "3",        },
-    { match = { class    = {"^Devhelp$"              }, }, tag = "3",        },
     { match = { class    = {"^Emacs$"                }, }, tag = "3",        },
     { match = { class    = {"^Gvim$"                 }, }, tag = "3",        },
-    { match = { class    = {"^Stardict$"             }, }, tag = "4",        },
-    { match = { class    = {"^mpv$", "Vlc", "^Luavid$", "^Gupnp%-av%-cp$", "^org%-tinymediamanager*" },
+    { match = { class    = {"^Goldendict$"           }, },            skip_taskbar = true,  intrusive = true,  },
+    { match = { role     = {"GoldenDict_Main_Window" }, }, tag = "4", skip_taskbar = false, intrusive = false, },
+    { match = { class    = {"^mpv$", "Vlc", "^Gupnp%-av%-cp$", "^org%-tinymediamanager*" },
               }, tag = "5",
     },
     { match = { class    = {"^plugin%-container$"    }, }, tag = "5",        },
+    { match = { instance = {"^mpvTerm$"              }, }, tag = "5",        },
     { match = { class    = {"^Deluge$"               }, }, tag = "6",        },
     { match = { class    = {"^Cantata$"              }, }, tag = "7",        },
     { match = { class    = {"^Sxiv$"                 }, }, tag = "8",        },
@@ -186,15 +201,19 @@ shifty.config.apps = {
     { match = { class    = {"^Zathura$"              }, }, tag = "9",        },
     { match = { class    = {"^Fbreader$"             }, }, tag = "10",       },
     { match = { class    = {"^Spacefm$"              }, }, tag = "fm",       },
-    { match = { class    = {"^Dropbox$"              }, }, tag = "cloud",    },
+    { match = { class    = {"^openmw", "Opencs"      }, }, tag = "mw",       },
     { match = { instance = {"^htopTerm$"             }, }, tag = "htop",     },
     { match = { instance = {"^logTerm$"              }, }, tag = "log",      },
     { match = { class    = {"^Wine$", "^qemu-.*", "^Spicec$", "^Xephyr$", "^org%-serviio%-console%-ServiioConsole$" },
-                --name     = {"spice://localhost:5900.*"}
               }, tag = "emul",
     },
+    { match = { class    = {"^SDL_App$"              }, }, tag = "emul",     },
+    { match = { class    = {"^Blueman%-.*"           }, }, tag = "emul",     },
+    { match = { class    = {"^jetbrains%-idea%-.*"   }, }, tag = "dev",      },
+    { match = { class    = {"^jetbrains%-android%-.*"}, }, tag = "dev",      },
+    { match = { instance = {"^sun%-awt%-X11%-.*"     }, }, tag = "dev",      },
+    { match = { class    = {"^Devhelp$"              }, }, tag = "dev",      },
     { match = { class    = {"^Liferea$"              }, }, tag = "rss",      },
-    { match = { class    = {"^Steam$"                }, }, tag = "steam",    },
     { match = { class    = {"^Skype$", "^Xchat$", "^Pidgin$", }
               }, tag = "im",
     },
@@ -293,92 +312,6 @@ function ()
     }
 end
 )
--- }}}
--- {{{ info wibox с переводом
-slovnik = infobox(
-function (s)
-    local title = ''
-    local text  = translate(s.style, s.word)
-    if (not text or text == '') then
-        title = markup.bold('не найдено: «'..markup.bold(markup.r(s.word)).."»")
-    end
-    return {
-        text  = text,
-        title = title,
-    }
-end,
-{
-    word = nil,
-    style = {},
-},
-beautiful.wibox.dict, "перевод"
-)
-slovnik.style = {
-    k    = {'red', 'bold'},
-    opt  = {'red'},
-    gr   = {'bold'},
-    b    = {'bold'},
-    tr   = {'tr', 'cyan'},
-    i    = {'italic'},
-    kref = {'blue', 'small'},
-    rref = {'underline', 'blue', 'small'},
-    syn  = {'bold', 'small', 'green'},
-    ex   = {'gray', 'small'},
-    abr  = {'green'},
-    c    = {'skip'},
-    mrkd = {'skip'},
-    co   = {'white'},
-    dtrn = {'magenta'},
-    sr   = {'delete'},
-}
-slovnik.toggle_style = function(tag)
-    if (slovnik.state.style[tag] == 'delete') then
-        slovnik.state.style[tag] = slovnik.style[tag]
-    else
-        slovnik.state.style[tag] = 'delete'
-    end
-end
-slovnik.on_hide = function()
-    if (slovnik.grabber) then
-        keygrabber.stop(slovnik.grabber)
-    end
-end
-slovnik.on_show = function()
-    slovnik.grabber = keygrabber.run(
-    function(mods, key, event)
-        if event ~= "press" then return end
-        local mod = {}
-        for k, v in ipairs(mods) do mod[v] = true end
-        if (mod.Control and (key == "c" or key == "g"))
-            or (key == "q")
-            or (key == "Escape") then
-            slovnik.hide()
-            return false
-        elseif (mod.Mod4 and key == "z") then
-            slovnik.hide()
-            return false
-        elseif (not mod.Control and key == "e") then
-            slovnik.toggle_style("ex")
-            slovnik.update()
-            slovnik.fit()
-            return true
-        elseif (not mod.Control and key == "r") then
-            slovnik.toggle_style("syn")
-            slovnik.toggle_style("kref")
-            slovnik.update()
-            slovnik.fit()
-            return true
-        elseif (not mod.Control and key == "t") then
-            slovnik.toggle_style("syn")
-            slovnik.toggle_style("kref")
-            slovnik.toggle_style("ex")
-            slovnik.update()
-            slovnik.fit()
-            return true
-        end
-    end
-    )
-end
 -- }}}
 -- }}}}}}
 -- {{{{{{ main wibox
@@ -692,7 +625,15 @@ vicious.register(mympd, vicious.widgets.mpd,
             local color_title = "#ff8888"
             if args["{random}"] == 1 then color_title = "#88ff88" end
             mympd_icon:set_image(beautiful.wibox.mpd.play)
-            return markup("#00bbbb", args["{Artist}"])..' '..markup(color_title, args["{Title}"])
+            local artist = args["{Artist}"]
+            local title = args["{Title}"]
+            if (artist == "N/A") then
+                artist = args["{file}"]:gsub(".*/(.*)$", "%1")
+            end
+            if (title == "N/A") then
+                title = args["{Name}"]
+            end
+            return markup("#00bbbb", artist)..' '..markup(color_title, title)
         end
     end, 0) -- 0 is good since mpdcron is been used
 vicious.force({mympd})
@@ -728,9 +669,9 @@ net_icon_down.image = beautiful.wibox.net.down
 mynet = cosy.widget.txt()
 
 local round_net = function(num)
-    local num = tonumber(num)
-    if ((num < 1) and (num > 0)) then return 1 end
-    return math.floor(num + 0.5)
+    local n = tonumber(num)
+    if ((n < 1) and (n > 0)) then return 1 end
+    return math.floor(n + 0.5)
 end
 vicious.register(mynet, vicious.widgets.net,
 function (widget, args)
@@ -832,6 +773,38 @@ function(...)
     nm_update_widget()
 end)
 -- }}}
+-- {{{ напоминание
+myrem      = cosy.widget.txt()
+myrem_icon = cosy.widget.img()
+myrem_icon.image = beautiful.wibox.rem
+do_remind = false
+local setreminder = function()
+    if (not do_remind) then
+        myrem_icon.visible = false
+        myrem.visible      = false
+        return
+    end
+    local text = ''
+    local file = io.open(os.getenv("HOME")..'/tmp/remind')
+    if file then
+        text = file:read("*a")
+        text = text:gsub("\n$", "")
+        io.close(file)
+    end
+    myrem:set_markup(markup.r(text))
+    if (text == '') then
+        myrem_icon.visible = false
+        myrem.visible      = false
+    else
+        myrem_icon.visible = true
+        myrem.visible      = true
+    end
+end
+myrem_timer = timer({timeout = 10})
+myrem_timer:connect_signal("timeout", setreminder)
+setreminder()
+myrem_timer:start()
+-- }}}
 mypromptbox = {}
 mylayoutbox = {}
 for s = 1, screen.count() do
@@ -841,13 +814,14 @@ gears.wallpaper.maximized(beautiful.wallpaper, s, true)
 mypromptbox[s] = awful.widget.prompt()
 mylayoutbox[s] = awful.widget.layoutbox(s)
 mylayoutbox[s]:buttons(awful.util.table.join(
-    awful.button({ }, 1, function () awful.layout.inc(layouts, 1) end),
+    awful.button({ }, 1, function () awful.layout.inc(layouts,  1) end),
     awful.button({ }, 3, function () awful.layout.inc(layouts, -1) end),
-    awful.button({ }, 4, function () awful.layout.inc(layouts, 1) end),
+    awful.button({ }, 4, function () awful.layout.inc(layouts,  1) end),
     awful.button({ }, 5, function () awful.layout.inc(layouts, -1) end)
 ))
 mytaglist[s]  = awful.widget.taglist( s, awful.widget.taglist.filter.all,          mytaglist.buttons)
-mytasklist[s] = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, mytasklist.buttons)
+--mytasklist[s] = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, mytasklist.buttons)
+mytasklist[s] = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, mytasklist.buttons, nil, tabs.taskupdate)
 -- }}}
 -- {{{ создание панели
 mywibox[s] = awful.wibox({ position = "top", screen = s, height = beautiful.main_wibox_height })
@@ -873,10 +847,10 @@ local mywidgets = {
         myrss_icon, myrss, myrss_separator,
         my_cpu_icon, mythermal_cpu, mythermal_hdd_icon, mythermal_hdd, separator,
         mybat_icon, mybat, mybat_separator,
-        volume.inputs[vin.qemu].imagebox,     volume.inputs[vin.qemu].textbox,          volume.inputs[vin.radiotray].imagebox,
-        volume.inputs[vin.radiotray].textbox, volume.inputs[vin.flash_plugin].imagebox, volume.inputs[vin.flash_plugin].textbox,
-        volume.inputs[vin.mplayer].imagebox,  volume.inputs[vin.mplayer].textbox,       volume.inputs[vin.mpd].imagebox,
-        volume.inputs[vin.mpd].textbox,       separator,
+        volume.inputs[vin.qemu].imagebox,      volume.inputs[vin.qemu].textbox,          volume.inputs[vin.radiotray].imagebox,
+        volume.inputs[vin.radiotray].textbox,  volume.inputs[vin.flash_plugin].imagebox, volume.inputs[vin.flash_plugin].textbox,
+        volume.inputs[vin.mplayer].imagebox,   volume.inputs[vin.mplayer].textbox,       volume.inputs[vin.mpd].imagebox,
+        volume.inputs[vin.mpd].textbox,        separator,
         volume.sinks[vss.speakers].imagebox,   volume.sinks[vss.speakers].textbox,   separator,
         volume.sinks[vss.headphones].imagebox, volume.sinks[vss.headphones].textbox, separator,
         mydate_icon, mydate, separator,
@@ -890,6 +864,7 @@ local mywidgets = {
             mytasklist[s],
         },
         [bottom_right_layout] = {-- низ справа
+            myrem_icon, myrem,
             mympd_icon, mympd,
         },
     },
@@ -922,18 +897,24 @@ root.buttons(awful.util.table.join(
 -- }}}
 -- {{{ clientbuttons
 clientbuttons = awful.util.table.join(
-    awful.button({ }, 1, function (c) client.focus = c; c:raise() end),
+    awful.button({        }, 1, function (c) client.focus = c; c:raise() end),
     awful.button({ modkey }, 1, awful.mouse.client.move),
     awful.button({ modkey }, 3, awful.mouse.client.resize)
 )
 -- }}}
 -- {{{ clientkeys
 clientkeys = awful.util.table.join(
+    awful.key({ modkey, "Shift"   }, "x",
+    function (c)
+        local text = markup.monospace(markup.g('class    '))..c.class
+        if (c.instance ~= nil) then text=text..'\n'..markup.monospace(markup.b('instance '))..c.instance end
+        if (c.role ~= nil) then text=text..'\n'..markup.monospace(markup.y('role     '))..c.role end
+        naughty.notify({title='xprop', text=text, timeout=10})
+    end),
     awful.key({ modkey,           }, "f",         function (c) c.fullscreen = not c.fullscreen  end),
     awful.key({ modkey,           }, "d",         function (c) c:kill()                         end),
     awful.key({ modkey, "Control" }, "backslash", awful.client.floating.toggle                     ),
     awful.key({ modkey, "Control" }, "Return",    function (c) c:swap(awful.client.getmaster()) end),
-    awful.key({ modkey, "Shift"   }, "r",         function (c) c:redraw()                       end),
     awful.key({ modkey,           }, "t",         function (c) c.ontop = not c.ontop            end),
     awful.key({ modkey,           }, "n",
     function (c)
@@ -968,6 +949,7 @@ awful.rules.rules = {
 globalkeys = awful.util.table.join(
     awful.key({ modkey,           }, "s",      mywibox.toggle),
     awful.key({ modkey, "Shift"   }, "s",      systray.toggle),
+    awful.key({ modkey, "Control" }, "s",      function () do_remind = not do_remind; setreminder() end),
     awful.key({ modkey, "Control" }, "k",      function () awful.util.spawn("xkill") end),
     awful.key({ modkey,           }, "Escape", function () mymainmenu:show({keygrabber=true}) end),
 -- {{{ layout and client
@@ -982,6 +964,11 @@ globalkeys = awful.util.table.join(
         if client.focus then client.focus:raise() end
     end),
     awful.key({ modkey,           }, "Tab",
+    function ()
+        awful.client.focus.history.previous()
+        if client.focus then client.focus:raise() end
+    end),
+    awful.key({ modkey,           }, "e",
     function ()
         awful.client.focus.history.previous()
         if client.focus then client.focus:raise() end
@@ -1008,8 +995,8 @@ globalkeys = awful.util.table.join(
 -- }}}
 -- {{{ Standard programs
     awful.key({ modkey,           }, "Return", function () awful.util.spawn(terminal) end),
-    awful.key({ modkey, "Control" }, "r",      awesome.restart),
-    awful.key({ modkey, "Shift"   }, "q",      awesome.quit),
+    awful.key({ modkey, "Control"          }, "r",      awesome.restart),
+    awful.key({ modkey, "Shift", "Control" }, "r",      awesome.quit),
 -- }}}
 -- {{{ tags
     awful.key({ modkey,           }, "l",     function () awful.tag.incmwfact( 0.05) end),
@@ -1056,9 +1043,8 @@ globalkeys = awful.util.table.join(
 -- {{{ infoboxes
     awful.key({ modkey, }, "z",
     function()
-        slovnik.state.style = awful.util.table.clone(slovnik.style)
-        slovnik.state.word  = selection():gsub("^([^\n]*)\n.*", "%1"):gsub("^(%s+)", ""):gsub("<", "«"):gsub(">", "»")
-        slovnik.toggle()
+        local word = selection():gsub("^([^\n]*)\n.*", "%1"):gsub("^(%s+)", ""):gsub("<", "«"):gsub(">", "»")
+        awful.util.spawn("goldendict '"..word.."'")
     end),
     awful.key({ modkey, }, "g", gismeteo.toggle)
 -- }}}
@@ -1097,14 +1083,23 @@ for i=1,9 do
     tags_keys(i, i)
 end
 tags_keys(0  , 10)
-tags_keys("e", 11)
-tags_keys("b", 12)
-tags_keys("i", 13)
+tags_keys("b", 11)
+tags_keys("i", 12)
+tags_keys("a", 13)
+tags_keys("q", 14)
 tags_keys("p", 15)
 tags_keys("c", 17)
 tags_keys("v", 18)
 tags_keys("o", 20)
 -- }}}
+--{{{ tabs_keys для эмуляции табов
+local function tabs_keys(i)
+    globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey, }, "F"..i, function() tabs.focus(i, mouse.screen) end))
+end
+for i=1,12 do
+    tabs_keys(i)
+end
+--}}}
 root.keys(globalkeys)
 shifty.config.globalkeys = globalkeys
 -- }}}}}}
@@ -1113,5 +1108,6 @@ shifty.config.globalkeys = globalkeys
 --client.connect_signal("manage",  function(c, startup) end)
 --client.connect_signal("focus",   function(c) c.border_color = beautiful.border_focus  end)
 --client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
+tabs.manage_reorder()
 -- }}}
 -- vim: foldmethod=marker:filetype=lua

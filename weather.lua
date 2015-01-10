@@ -3,7 +3,7 @@ local lxp = require "lxp"
 
 local weather = {}
 
-local file = "/var/tmp/weather/weather.xml"
+local file = "/home/liaonau/tmp/weather.xml"
 -- {{{ парсер, forecast — табличное представление xml
 local function parse(file)
     local forecast = {}

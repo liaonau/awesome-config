@@ -15,7 +15,6 @@ local wb   = path..'wibox/'
 theme.main_wibox_height = "38"
 
 theme.font          = "Bitstream Vera sans 10"
-
 theme.bg_normal     = "#222222"
 theme.bg_focus      = "#535d6c"
 theme.bg_urgent     = "#A36666"
@@ -48,6 +47,12 @@ theme.taglist_squares_sel   = path.."taglist/squarefw.png"
 theme.taglist_squares_unsel = path.."taglist/squarew.png"
 
 theme.tasklist_floating_icon = path.."tasklist/floatingw.png"
+theme.tasklist_bg_focus    = "#dcdad5"
+theme.tasklist_fg_focus    = "#222222"
+theme.tasklist_bg_normal   = "#777766"
+theme.tasklist_fg_normal   = "#222222"
+theme.tasklist_bg_urgent   = "#A36666"
+theme.tasklist_bg_minimize = "#555500"
 
 -- Variables set for theming the menu:
 -- menu_[bg|fg]_[normal|focus]
@@ -159,6 +164,7 @@ theme.wibox.usb         = wb.."usb.png"
 theme.wibox.cdrom       = wb.."cdrom.png"
 theme.wibox.log         = wb.."logview.png"
 theme.wibox.dict        = wb.."dict.png"
+theme.wibox.rem         = wb.."remind.png"
 
 theme.wallpaper = path.."wallpaper/earthwater.jpg"
 
