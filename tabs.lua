@@ -1,6 +1,8 @@
+--local capi      = { client = client, screen = screen, }
 local capi      = { client = client, screen = screen, }
 local client    = require("awful.client")
 local common    = require("awful.widget.common")
+local util      = require("awful.util")
 local beautiful = require("beautiful")
 local naughty   = require("naughty")
 
@@ -43,6 +45,11 @@ tabs.taskupdate = function(w, buttons, label, data, objects)
         local text, bg, bg_image, icon = label(c)
         if (c:isvisible() and (#getclients(c.screen) > 1)) then
             text = tabs.styler(text, getindex(c), c)
+        end
+        if not (c.skip_taskbar or c.hidden or c.type == "splash" or c.type == "dock" or c.type == "desktop") then
+            if c.class == 'URxvt' then
+                icon = util.getdir("config").."/themes/tags/terminal.png"
+            end
         end
         return text, bg, bg_image, icon
     end, data, objects)

@@ -1,9 +1,10 @@
 --  прогноз погоды с GisMeteo
-local lxp = require "lxp"
+local lxp   = require("lxp")
+local awful = require("awful")
 
 local weather = {}
 
-local file = "/home/liaonau/tmp/weather.xml"
+local file = awful.util.getdir('cache').."/weather.xml"
 -- {{{ парсер, forecast — табличное представление xml
 local function parse(file)
     local forecast = {}

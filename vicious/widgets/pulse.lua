@@ -22,7 +22,7 @@ local math = {
 }
 -- }}}
 
-module("vicious.widgets.pulse")
+local pulse = {}
 
 -- {{{ Helper function
 local function pacmd(args)
@@ -72,7 +72,7 @@ local function worker(format, sink)
     local vol = tonumber(string.match(data, "set%-sink%-volume "..escape(sink).." (0x[%x]+)"))
     if vol == nil then vol = 0 end
 
-    return { volume = math.floor(vol/0x10000*100), mute = false}
+    return { volume = math.floor(vol/0x10000*100), mute = false }
 end
 -- }}}
 
@@ -109,5 +109,5 @@ function toggle(sink)
 end
 -- }}}
 
-setmetatable(_M, { __call = function(_, ...) return worker(...) end })
+return setmetatable(pulse, { __call = function(_, ...) return worker(...) end })
 

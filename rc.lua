@@ -189,7 +189,7 @@ shifty.config.apps = {
     { match = { class    = {"^Gvim$"                 }, }, tag = "3",        },
     { match = { class    = {"^Goldendict$"           }, },            skip_taskbar = true,  intrusive = true,  },
     { match = { role     = {"GoldenDict_Main_Window" }, }, tag = "4", skip_taskbar = false, intrusive = false, },
-    { match = { class    = {"^mpv$", "Vlc", "^Gupnp%-av%-cp$", "^org%-tinymediamanager*" },
+    { match = { class    = {"^mpv$", "Vlc", "^Gupnp%-av%-cp$", "^org%-tinymediamanager.*" },
               }, tag = "5",
     },
     { match = { class    = {"^plugin%-container$"    }, }, tag = "5",        },
@@ -204,14 +204,13 @@ shifty.config.apps = {
     { match = { class    = {"^openmw", "Opencs"      }, }, tag = "mw",       },
     { match = { instance = {"^htopTerm$"             }, }, tag = "htop",     },
     { match = { instance = {"^logTerm$"              }, }, tag = "log",      },
-    { match = { class    = {"^Wine$", "^qemu-.*", "^Spicec$", "^Xephyr$", "^org%-serviio%-console%-ServiioConsole$" },
+    { match = { class    = {"^Wine$", "^[qQ]emu-.*", "^[rR]emote%-viewer$", "^Xephyr$" },
               }, tag = "emul",
     },
     { match = { class    = {"^SDL_App$"              }, }, tag = "emul",     },
     { match = { class    = {"^Blueman%-.*"           }, }, tag = "emul",     },
     { match = { class    = {"^jetbrains%-idea%-.*"   }, }, tag = "dev",      },
     { match = { class    = {"^jetbrains%-android%-.*"}, }, tag = "dev",      },
-    { match = { instance = {"^sun%-awt%-X11%-.*"     }, }, tag = "dev",      },
     { match = { class    = {"^Devhelp$"              }, }, tag = "dev",      },
     { match = { class    = {"^Liferea$"              }, }, tag = "rss",      },
     { match = { class    = {"^Skype$", "^Xchat$", "^Pidgin$", }
@@ -785,7 +784,7 @@ local setreminder = function()
         return
     end
     local text = ''
-    local file = io.open(os.getenv("HOME")..'/tmp/remind')
+    local file = io.open(awful.util.getdir('cache')..'/remind')
     if file then
         text = file:read("*a")
         text = text:gsub("\n$", "")
