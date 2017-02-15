@@ -1,336 +1,293 @@
--- {{{ Variable definitions, imports
 io.stderr:write("Starting Awesome WM\n")
 os.setlocale(os.getenv("LANG"))
+-- {{{ imports
+awful      = require("awful")
+gears      = require("gears")
+vicious    = require("vicious")
+tyrannical = require("tyrannical")
+naughty    = require("naughty")
+pulse      = require("pulse")
 
-local awful  = require("awful")
-require("awful.autofocus")
-awful.rules  = require("awful.rules")
-awful.common = require("awful.widget.common")
-keygrabber   = require("awful.keygrabber")
+local awful       = awful
+local gears       = gears
+local vicious     = vicious
+local pulse       = pulse
+local tyrannical  = tyrannical
+local naughty     = naughty
 
-vicious = require("vicious")
-pulse   = require("pulse")
-shifty  = require("shifty")
-gears   = require("gears")
-timer   = require("timer")
-naughty = require("naughty")
-naughty.config.icon_dirs = {
-    awful.util.getdir("config").."/themes/naughty/",
-    "/usr/share/pixmaps/",
-    "/usr/share/icons/gnome/16x16/status/",
-}
---naughty.config.defaults.opacity=0.6
-local wibox     = require("wibox")
-local beautiful = require("beautiful")
-local weather   = require("weather")
-
-local cosy      = require("cosy")
-local markup    = cosy.markup
-local infobox   = require("infobox")
-
-local tabs      = require("tabs")
-tabs.styler = function(text, n, c)
-    local fg   = "black"
-    local bg   = "lightcyan"
-    bg = "#338833"
-    fg = "white"
-    local font = "11"
-    --if (client.focus == c) then
-        --bg = "cyan"
-        --fg = "black"
-    --end
-return '<span font_desc="'..font..'" background="'..bg..'" foreground="'..fg..'"> '..n..' </span>'..text
-end
-
-local freedesktop   = {}
-freedesktop.menu    = require('freedesktop.menu')
-freedesktop.utils   = require('freedesktop.utils')
-freedesktop.desktop = require('freedesktop.desktop')
+local beautiful   = require("beautiful")
+local wibox       = require("wibox")
+local menubar     = require("menubar")
+local meteo       = require("meteo")
+local markup      = require("markup")
+local infobox     = require("infobox")
+local tabular     = require("tabular")
+local freedesktop = require('freedesktop')
+local autofocus   = require("awful.autofocus")
+local move_resize = require("move_resize")
 
 -- remote последним
 awful.remote = require("awful.remote")
-
--- Themes define colours, icons, and wallpapers
-beautiful.init(awful.util.getdir("config") .. "/themes/theme.lua")
-
--- This is used later as the default terminal and editor to run.
-terminal = "urxvt"
-editor   = "emacsclient -d "..os.getenv("DISPLAY").." -a vim"
-
--- Default modkey.
+-- }}}
+-- {{{ variable definitions, auxillary functions
 modkey = "Mod4"
 
--- Table of layouts to cover with awful.layout.inc, order matters.
+tabular.styler = function(text, n, c)
+    local bg = "#338833"
+    local fg = "white"
+    local font_size = "11"
+    return '<span font_desc="'..font_size..'" background="'..bg..'" foreground="'..fg..'"> '..n..' </span>'..text
+end
+
+beautiful.init(awful.util.getdir("config") .. "/themes/theme.lua")
+
+naughty.config.icon_dirs = beautiful.dirs.naughty_icons
+--naughty.config.defaults.opacity=0.6
+
+terminal = "urxvt"
+editor   = os.getenv("EDITOR") or "gvim"
+
 local als = awful.layout.suit
-als.tabs  = tabs.layout
+als.tabular  = tabular.layout
 layouts =
 {
     als.tile.top,
---    als.tile,
---    als.tile.left,
---    als.tile.bottom,
-    als.fair,
---    als.fair.horizontal,
-    als.floating,
---    als.spiral,
---    als.spiral.dwindle,
---    als.max,
---    als.max.fullscreen,
---    als.magnifier,
-    als.tabs,
-}
+    --als.fair,
+    --als.floating,
+    als.tabular,
 
--- java AWT/swing fix
-awful.util.spawn("wmname LG3D")
+    --als.tile,
+    --als.tile.left,
+    --als.tile.bottom,
+    --als.fair.horizontal,
+    --als.spiral,
+    --als.spiral.dwindle,
+    --als.max,
+    --als.max.fullscreen,
+    --als.magnifier,
+
+    awful.layout.suit.tile,
+    awful.layout.suit.tile.left,
+    awful.layout.suit.tile.bottom,
+    awful.layout.suit.tile.top,
+    awful.layout.suit.fair,
+    awful.layout.suit.fair.horizontal,
+    awful.layout.suit.spiral,
+    awful.layout.suit.spiral.dwindle,
+    awful.layout.suit.max,
+    awful.layout.suit.max.fullscreen,
+    awful.layout.suit.magnifier,
+    awful.layout.suit.corner.nw,
+    awful.layout.suit.corner.ne,
+    awful.layout.suit.corner.sw,
+    awful.layout.suit.corner.se,
+}
 -- }}}
--- {{{ shifty
-shifty.config.defaults = {
-    layout = als.tile.top,
-    exclusive = true,
-}
+-- {{{ helper functions
+local function client_menu_toggle_fn()
+    local instance = nil
 
-shifty.config.tags = {
-    ["1"] = {
-        position = 1, icon = "terminal.png",
-        exclusive = true,
-        init = true, layout = als.tabs,
-    },
-    ["2"] = {
-        position = 2, icon = "ff.png", layout = als.tabs,
-        --spawn = "firefox",
-        spawn = "browser",
-    },
-    ["3"] = {
-        position = 3, icon = "emacs.png",
-        layout = als.tabs,
-        spawn = editor .. " -c",
-    },
-    ["4"] = {
-        position = 4, icon = "dict.png",
-        spawn = "goldendict",
-    },
-    ["5"] = {
-        position = 5, icon = "mplayer.png",
-        layout = als.tabs,
-    },
-    ["6"] = {
-        position = 6, icon = "deluge.png",
-        spawn = "deluge-gtk",
-    },
-    ["7"] = {
-        position = 7, icon = "audio.png",
-        spawn = "cantata",
-    },
-    ["8"] = {
-        position = 8, icon = "image.png",
-    },
-    ["9"] = {
-        position = 9, icon = "evince.png",
-    },
-    ["10"] = {
-        position = 10,icon = "fbreader.png",
-        spawn = "fbreader",
-    },
-    ["fm"] = {
-        position = 11, icon = "file.png",
-        spawn = "spacefm",
-    },
-    ["htop"] = {
-        position = 12, icon = "htop.png",
-        spawn = terminal.." -name htopTerm -e htop",
-    },
-    ["emul"] = {
-        position = 13, icon = "emul.png",
-        layout = als.fair,
-    },
-    ["dev"] = {
-        position = 14, icon = "gear.png",
-        layout = als.tabs,
-    },
-    ["im"] = {
-        position = 15, icon = "im.png",
-        mwfact   = 0.7,
-        nmaster  = 1,
-        ncol     = 1,
-        layout   = als.tile.left,
-    },
-    ["rss"] = {
-        position = 17, icon = "rss.png",
-        spawn = "liferea",
-    },
-    ["log"] = {
-        position = 18, icon = "logview.png",
-        spawn = terminal.." -cr black -rv -name logTerm -e /bin/sh -c '/usr/bin/journalctl -b -n 39 -f | ccze -A -m ansi'",
-    },
-    ["mw"] = {
-        position = 20, icon = "openmw.png",
-    },
-}
-for k, v in pairs(shifty.config.tags) do
-    if (v.icon) then
-        v.icon = awful.util.getdir("config").."/themes/tags/"..v.icon
+    return function()
+        if instance and instance.wibox.visible then
+            instance:hide()
+            instance = nil
+        else
+            instance = awful.menu.clients({ theme = { width = 250 } })
+        end
     end
 end
 
-shifty.config.apps = {
-    { match = { ["type"]  = {"dialog"} }, ontop = true, },
+local function round(num, pow)
+    local p = 10^(pow or 0)
+    return math.floor(num * p + 0.5) / p
+end
+
+-- lua 5.1/5.2 compatibility
+table.pack = table.pack or
+    function(...)
+        return {n=select('#',...); ...}
+    end
+
+table.unpack = table.unpack or unpack
+
+local function set_wallpaper(s)
+    if beautiful.wallpaper then
+        local wallpaper = beautiful.wallpaper
+        if type(wallpaper) == "function" then
+            wallpaper = wallpaper(s)
+        end
+        gears.wallpaper.maximized(wallpaper, s, true)
+    end
+end
+-- }}}
+-- {{{ menu
+menubar.utils.terminal = terminal
+mymainmenu = freedesktop.menu.build(
+{
+    theme = {width = 250},
+    before =
     {
-      match = { instance = {"pavucontrol"}},
-      float = true, geometry = {223, beautiful.main_wibox_height, 800, 730},
-      ontop = true, skip_taskbar = true, intrusive = true,
     },
+    after =
+    {
+        { "restart",  function() awesome.restart() end, menubar.utils.lookup_icon('gtk-refresh') },
+        { "quit",     function() awesome.quit()    end, menubar.utils.lookup_icon('gtk-quit'   ) },
+        { "terminal", terminal,                          menubar.utils.lookup_icon('terminal'   ) },
+    }
+})
 
-    { match = { class    = {"^URxvt$"                }, }, tag = "1",        },
-    { match = { class    = {"^Firefox$"              }, }, tag = "2",        },
-    { match = { class    = {"^luakit$"               }, }, tag = "2",        },
-    { match = { class    = {"^Uzbl.*$"               }, }, tag = "2",        },
-    { match = { class    = {"^Dwb$"                  }, }, tag = "2",        },
-    { match = { class    = {"^Emacs$"                }, }, tag = "3",        },
-    { match = { class    = {"^Gvim$"                 }, }, tag = "3",        },
-    { match = { class    = {"^Goldendict$"           }, },            skip_taskbar = true,  intrusive = true,  },
-    { match = { role     = {"GoldenDict_Main_Window" }, }, tag = "4", skip_taskbar = false, intrusive = false, },
-    { match = { class    = {"^mpv$", "Vlc", "^Gupnp%-av%-cp$", "^org%-tinymediamanager.*" },
-              }, tag = "5",
-    },
-    { match = { class    = {"^plugin%-container$"    }, }, tag = "5",        },
-    { match = { instance = {"^mpvTerm$"              }, }, tag = "5",        },
-    { match = { class    = {"^Deluge$"               }, }, tag = "6",        },
-    { match = { class    = {"^Cantata$"              }, }, tag = "7",        },
-    { match = { class    = {"^Sxiv$"                 }, }, tag = "8",        },
-    { match = { class    = {"^Geeqie$"               }, }, tag = "8",        },
-    { match = { class    = {"^Zathura$"              }, }, tag = "9",        },
-    { match = { class    = {"^Fbreader$"             }, }, tag = "10",       },
-    { match = { class    = {"^Spacefm$"              }, }, tag = "fm",       },
-    { match = { class    = {"^openmw", "Opencs"      }, }, tag = "mw",       },
-    { match = { instance = {"^htopTerm$"             }, }, tag = "htop",     },
-    { match = { instance = {"^logTerm$"              }, }, tag = "log",      },
-    { match = { class    = {"^Wine$", "^[qQ]emu-.*", "^[rR]emote%-viewer$", "^Xephyr$" },
-              }, tag = "emul",
-    },
-    { match = { class    = {"^SDL_App$"              }, }, tag = "emul",     },
-    { match = { class    = {"^Blueman%-.*"           }, }, tag = "emul",     },
-    { match = { class    = {"^jetbrains%-idea%-.*"   }, }, tag = "dev",      },
-    { match = { class    = {"^jetbrains%-android%-.*"}, }, tag = "dev",      },
-    { match = { class    = {"^Devhelp$"              }, }, tag = "dev",      },
-    { match = { class    = {"^Liferea$"              }, }, tag = "rss",      },
-    { match = { class    = {"^Skype$", "^Xchat$", "^Pidgin$", }
-              }, tag = "im",
-    },
-    { match = { class    = {"^Pidgin$"}, role = {"^conversation$"}, }, nopopup = true, slave = false },
-    { match = { class    = {"^Pidgin$"}, role = {"^buddy_list$"  }, }, slave = true },
-
-    { match = { "" }, honorsizehints=false },
-}
-
-shifty.init()
+mylauncher = awful.widget.launcher({image = beautiful.awesome_icon, menu = mymainmenu})
 -- }}}
--- {{{ Menu
-freedesktop.utils.terminal      = terminal
-freedesktop.utils.icon_theme    = 'gnome'   -- look inside /usr/share/icons/, default: nil (don't use icon theme)
-
-menu_items = freedesktop.menu.new()
-myawesomemenu = {
-    { "manual",      terminal .. " -e man awesome",       freedesktop.utils.lookup_icon({ icon = 'help' })            },
-    { "edit config", editor   .. " " .. awesome.conffile, freedesktop.utils.lookup_icon({ icon = 'package_settings' })},
-    { "restart",     awesome.restart,                     freedesktop.utils.lookup_icon({ icon = 'gtk-refresh' })     },
-    { "quit",        awesome.quit,                        freedesktop.utils.lookup_icon({ icon = 'gtk-quit' })        },
-}
-table.insert(menu_items, { "awesome",       myawesomemenu,  beautiful.awesome_icon })
-table.insert(menu_items, { "open terminal", terminal,       freedesktop.utils.lookup_icon({icon = 'terminal'}) })
-
-mymainmenu = awful.menu.new({ items = menu_items, theme = {width = 150 } })
-mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon, menu = mymainmenu })
--- }}}
--- {{{{{{ info wiboxes
+-- {{{ infoboxes
 -- {{{ info wibox с df
-local disks = infobox(
-function ()
-    local text = awful.util.pread("di -h -f MpTBv -x squashfs,aufs,rootfs")
-    text = string.gsub(text, "(/[^%s]*)",  markup.b('%1'))
-    text = string.gsub(text, "(%d+%%)",    markup.g("%1"))
-    text = string.gsub(text, "([78]%d%%)", markup.y("%1"))
-    text = string.gsub(text, "(9%d%%)",    markup.r("%1"))
-    text = string.gsub(text, "(100%%)",    markup.r("%1"))
-    text = string.gsub(text, "(tmpfs)",    markup("#777777", "%1"))
-    text = text:sub(1, -2)
-    text = markup.font_desc("monospace 11", text)
-    return {text = text}
+local disksbox = infobox(
+function(ib)
+    local text
+    awful.spawn.easy_async("di -h -f MpTBv -x squashfs,aufs,rootfs,overlay",
+    function(stdout, stderr, exitreason, exitcode)
+        text = stdout
+        text = string.gsub(text, "(/[^%s]*)",  markup.b('%1'))
+        text = string.gsub(text, "(%d+%%)",    markup.g("%1"))
+        text = string.gsub(text, "([78]%d%%)", markup.y("%1"))
+        text = string.gsub(text, "(9%d%%)",    markup.r("%1"))
+        text = string.gsub(text, "(100%%)",    markup.r("%1"))
+        text = string.gsub(text, "(tmpfs)",    markup("#777777", "%1"))
+        text = text:sub(1, -2)
+        text = markup.font_desc("monospace 11", text)
+        ib.text:set_markup(text)
+    end)
 end, nil,
 beautiful.wibox.disks, 'df'
 )
 -- }}}
 -- {{{ info wibox с календарем
-local date = infobox(
-function (s)
+local datebox = infobox(
+function(ib)
     local today = os.date('*t')
-    local m     = today.year * 12 + today.month + s.offset - 1
+    local m     = today.year * 12 + today.month + ib.state.offset - 1
     local month = m % 12 + 1
     local year  = math.floor(m / 12)
-    local text  = awful.util.pread("/usr/bin/cal " .. month .. ' ' .. year):sub(1, -2)
-    if (s.offset == 0) then
-        text = string.gsub(text, "([^%d]"..today.day.."[^%d])", markup.b("%1"))
-    end
-    text = markup.font_desc('monospace 12', text)
-    return {text = text}
+    local text
+    awful.spawn.easy_async("/usr/bin/cal " .. month .. ' ' .. year,
+    function(stdout, stderr, exitreason, exitcode)
+        text = stdout:sub(1, -2)
+        if (ib.state.offset == 0) then
+            text = string.gsub(text, "([^%d]"..today.day.."[^%d])", markup.b("%1"))
+        end
+        text = markup.font_desc('monospace 12', text)
+        ib.text:set_markup(text)
+    end)
 end,
 {offset = 0},
 beautiful.wibox.calendar, 'календарь'
 )
-date.on_hide = function(s)
+datebox.on_hide = function(s)
     s.offset = 0
 end
-date.on_show = function(s)
+datebox.on_show = function(s)
     s.offset = 0
 end
 -- }}}
 -- {{{ info wibox с погодой
-local gismeteo = infobox(
-function ()
-    local text_weather = ''
-    local icon_weather
-    local gw = weather.get()
-    for c = 1,4 do
-        local gm = gw[c]
-        if (c == 1 and gm['icon']) then
-            icon_weather = awful.util.getdir('config')..'/themes/weather/'..gm['icon']
-        end
-        text_weather = text_weather ..
-        markup.b(gm['day']..':\n')..
-        gm['cloudiness']..', '..gm['precipitation']..'\n'..
-        'температура:   '..gm['temperature']..'°\n'..
-        'ощущается как: '..gm['heat']..'°\n'..
-        'ветер:         '..gm['wind']..' м/с\n'..
-        'давление:      '..gm['pressure']..' мм.рт.ст.\n'
+local weather_lag = 7200
+local function get_text_weather(weather)
+    local time = os.time()
+
+    local utcdate   = os.date("!*t", time)
+    local localdate = os.date("*t",  time)
+    localdate.isdst = false -- this is the trick
+    local diffdate  = os.difftime(os.time(localdate), os.time(utcdate))
+
+    local diff = weather.time - time
+    local diffhour = tostring(round(diff/3600))
+
+    local caption = 'сейчас'
+    if (weather.time_txt ~= nil) then
+        local pattern = "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)"
+        local year, month, day, hour, min, sec = weather.time_txt:match(pattern)
+        local ts_utc = os.time({year = year, month = month, day = day, hour = hour, min = min, sec = sec, tz="UTC"})
+        local dt = os.date('%c', os.time(os.date('*t', ts_utc)) + diffdate);
+        caption = '('..diffhour..') '..dt:gsub(":[0-9][0-9]$", '')
     end
-    text_weather = text_weather:sub(1, -2)
-    text_weather = markup.font_desc('monospace 12', text_weather)
-    return {
-        text = text_weather,
-        title = 'погода ' .. gw.date,
-        icon = icon_weather,
-    }
+    local text = markup.b(caption)
+    if (diff + weather_lag < 0) then
+        text = text..markup.r("\nданные устарели\n\n")
+    else
+        text = text..'\n'..
+        markup.m(weather.description)..'\n'..
+        'температура, °C     '..markup.m(string.format("%3s", weather.temp))..'\n'..
+        'давление, мм рт.ст. '..markup.c(string.format(weather.pressure))..'\n'..
+        'влажность, %        '..markup.c(string.format("%3s", weather.humidity))..'\n'..
+        'ветер, м/с          '..markup.c(string.format("%3s", weather.wind):gsub(',', '.'))..'\n'..
+        'облачность, %       '..markup.c(string.format("%3s", weather.clouds))..'\n'..
+        '\n'
+    end
+    return text
+end
+
+meteobox = infobox(
+function(ib)
+    local dir_meteo = os.getenv("HOME").."/.local/share/meteo/"
+    local forecast = meteo.forecast(dir_meteo..'forecast.json')
+    local weather = meteo.weather(dir_meteo..'weather.json')
+    local now  = ''
+    local text = ''
+
+    local icon = beautiful.dirs.weather..weather.icon..'.png'
+
+    now = get_text_weather(weather, 'сейчас')
+    now = markup.font_desc('monospace 12', now)
+    text = ''
+    text = text..get_text_weather(forecast[3])
+    text = text..get_text_weather(forecast[5])
+    text = text..get_text_weather(forecast[9])
+    text = text..get_text_weather(forecast[17])
+    --text = text:sub(1, -2)
+    text = markup.font_desc('monospace 10', text)
+    text = now..text
+    title = markup.font_desc('monospace 14', '\nпогода\n'),
+
+    ib.text:set_markup(text)
+    ib.title:set_markup(title)
+    ib.icon:set_image(icon)
 end
 )
 -- }}}
--- }}}}}}
--- {{{{{{ main wibox
-mywibox = {}
-mywibox.toggle = function () mywibox[mouse.screen].visible = not mywibox[mouse.screen].visible end
+-- }}}
+-- {{{ wibar
+--infos = {}
+--function update_info(ins, info)
+    --if (not ins.info or not ins.info.update or type(ins.info.update) ~= 'function') then
+        --return
+    --end
+    --ins.info.update()
+--end
+--{{{ keyboard layout
+mykeyboardlayout = wibox.widget.imagebox()
+local function update_keyboard_layout()
+    local current = awesome.xkb_get_layout_group();
+    if (current == 0) then
+        mykeyboardlayout.image = beautiful.kbd.us
+    else
+        mykeyboardlayout.image = beautiful.kbd.ru
+    end
+end
+--}}}
 -- {{{ tray
 systray = wibox.widget.systray()
 systray.stupid_bug = drawin({})
-systray_layout = wibox.layout.constraint()
-systray_layout:set_widget(systray)
+systray_layout = wibox.container.constraint()
+systray_layout.widget = systray
 systray.visible = true
 systray.toggle  = function()
     systray.visible = not systray.visible
     if (systray.visible) then
-        systray_layout:set_widget(systray)
+        systray_layout.widget = systray
     else
         -- To hide the systray (actually "to move the systray into the drawin called
         -- stupid_bug which is not visible and making sure it does not get moved back")
         awesome.systray(systray.stupid_bug, 0, 0, 10, true, "#000000")
-        systray_layout:set_widget(nil)
+        systray_layout.widget = nil
     end
 end
 -- }}}
@@ -338,77 +295,26 @@ end
 separator = wibox.widget.imagebox()
 separator:set_image(beautiful.wibox.separator)
 -- }}}
--- {{{ taglist, +мышь
-mytaglist = {}
-shifty.taglist = mytaglist
-mytaglist.buttons = awful.util.table.join(
-    awful.button({ }, 1, awful.tag.viewonly),
-    awful.button({ modkey }, 1, awful.client.movetotag),
-    awful.button({ }, 3, awful.tag.viewtoggle),
-    awful.button({ modkey }, 3, awful.client.toggletag),
-    awful.button({ }, 4, function(t) awful.tag.viewnext(awful.tag.getscreen(t)) end),
-    awful.button({ }, 5, function(t) awful.tag.viewprev(awful.tag.getscreen(t)) end)
-
-)
--- }}}
--- {{{ tasklist, +мышь
-mytasklist = {}
-mytasklist.buttons = awful.util.table.join(
-awful.button({ }, 1, function (c)
-    if c == client.focus then
-        c.minimized = true
-    else
-        -- Without this, the following
-        -- :isvisible() makes no sense
-        c.minimized = false
-        if not c:isvisible() then
-            awful.tag.viewonly(c:tags()[1])
-        end
-        -- This will also un-minimize
-        -- the client, if needed
-        client.focus = c
-        c:raise()
-    end
-end),
-awful.button({ }, 3, function ()
-    if instance then
-        instance:hide()
-        instance = nil
-    else
-        instance = awful.menu.clients({
-            theme = { width = 250 }
-        })
-    end
-end),
-awful.button({ }, 4, function ()
-    awful.client.focus.byidx(1)
-    if client.focus then client.focus:raise() end
-end),
-awful.button({ }, 5, function ()
-    awful.client.focus.byidx(-1)
-    if client.focus then client.focus:raise() end
-end))
--- }}}
 -- {{{ часы
 mydate_icon = wibox.widget.imagebox()
 mydate_icon:set_image(beautiful.wibox.date)
 
 mydate = wibox.widget.textbox()
-vicious.register(mydate, vicious.widgets.date, markup.b("%a %d %b %H:%M"), 10)
+vicious.register(mydate, vicious.widgets.date, markup.b("%a %d %b ")..markup.c("%H:%M"), 10)
 
-mydate:connect_signal(     "mouse::leave", date.hide )
-mydate_icon:connect_signal("mouse::leave", date.hide )
+mydate:connect_signal(     "mouse::leave", datebox.hide)
+mydate_icon:connect_signal("mouse::leave", datebox.hide)
 local date_control = awful.util.table.join(
-    awful.button({ }, 1, date.show),
+    awful.button({ }, 1, datebox.show),
     awful.button({ }, 4,
     function()
-        date.state.offset = date.state.offset - 1
-        date.update()
+        datebox.state.offset = datebox.state.offset - 1
+        datebox.update()
     end),
     awful.button({ }, 5,
     function()
-        date.state.offset = date.state.offset + 1
-        date.update()
+        datebox.state.offset = datebox.state.offset + 1
+        datebox.update()
     end)
 )
 mydate:buttons(date_control)
@@ -427,16 +333,19 @@ vin =
         flash_plugin = "ALSA plug-in [plugin-container]",
         radiotray = "radiotray",
         qemu="qemu-system-x86_64",
+        vlc="VLC media player (LibVLC 2.1.4)",
     }
 vss =
     {
-        headphones = "alsa_output.usb-Logitech_Logitech_Wireless_Headset_000D44D39CAA-00-Headset.analog-stereo",
+        headphones = "alsa_output.usb-Logitech_Logitech_Wireless_Headset_000D44D39CAA-00.analog-stereo",
         speakers   = "alsa_output.pci-0000_00_1b.0.analog-stereo",
+        ladspa     = "ladspa_sink",
+        --ladspa     = "ladspa_normalized_sink",
     }
 volume =
     {
-        sinks  = pulse.sinks({vss.headphones, vss.speakers}),
-        inputs = pulse.inputs({vin.mpd, vin.mplayer, vin.flash_plugin, vin.radiotray, vin.qemu})
+        sinks  = pulse.sinks({vss.headphones, vss.speakers, vss.ladspa}),
+        inputs = pulse.inputs({vin.mpd, vin.mplayer, vin.flash_plugin, vin.radiotray, vin.qemu, vin.vlc})
     }
 volume.update_sinks = function()
     pulse.update_sinks(volume.sinks, function(s) return string.format(markup.b("%s"), s) end)
@@ -452,19 +361,29 @@ volume.update_all()
 -- }}}
 -- {{{ батарея
 --wake up upowerd
-awful.util.spawn_with_shell('qdbus --system org.freedesktop.UPower 1>/dev/null')
 dbus.add_match("system", "path='/org/freedesktop/UPower/devices/battery_BAT0',member='PropertiesChanged'")
 dbus.add_match("system", "path='/org/freedesktop/UPower/devices/line_power_AC',member='PropertiesChanged'")
 
-mybat_icon = cosy.widget.img()
-mybat_icon.image = beautiful.wibox.battery["missing"]
-mybat_separator = cosy.widget.img()
+mybat_icon            = wibox.widget.imagebox()
+mybat_icon.image      = beautiful.wibox.battery["missing"]
+mybat_separator       = wibox.widget.imagebox()
 mybat_separator.image = beautiful.wibox.separator
-mybat = cosy.widget.txt()
+mybat                 = wibox.widget.textbox()
+
+local bat_state = 0
 vicious.register(mybat, vicious.widgets.bat,
-    function (widget, args)
+    function(widget, args)
         local sign, level = args[1], args[2]
 
+        if (bat_state ~= 0 and sign == '⌁') then
+            if     (bat_state == 1) then
+                sign = '+'
+            elseif (bat_state == 2) then
+                sign = '−'
+            elseif (bat_state == 4) then
+                sign = '↯'
+            end
+        end
         if     (sign == '↯') then -- заряжено
             mybat_icon.visible      = false
             mybat.visible           = false
@@ -472,7 +391,7 @@ vicious.register(mybat, vicious.widgets.bat,
         else
             if     (sign == '⌁') then -- неизвестно
                 mybat_icon.image = beautiful.wibox.battery["missing"]
-            elseif (sign == '-' or sign == '+') then
+            elseif (sign == '−' or sign == '+') then
                 local suf = ''
                 if (sign == '+') then suf = '_c' end
                 if     (level == 100) then
@@ -495,16 +414,14 @@ vicious.register(mybat, vicious.widgets.bat,
         end
 
         local perc_color = "#88ff88"
-        local warn_level = 40
-        local crit_level = 20
+        local warn_level = 35
+        local crit_level = 15
         if (level > crit_level and level <= warn_level) then
             perc_color = "#ffff88"
         elseif (level <= crit_level) then
             perc_color = "#ff8888"
         end
         local text = markup(perc_color, level..'%')
-        --if ( sign == '-' ) then sign = '–' end -- минус маленький U2013
-        --local text = markup.y(sign) .. markup(perc_color, level..'%')
         return text
     end,
 0, "BAT0")
@@ -512,50 +429,56 @@ dbus.connect_signal("org.freedesktop.DBus.Properties",
 function(...)
     local data = {...}
     if (data[2] ~= "org.freedesktop.UPower.Device") then return end
+    local device = data[1].path:match('([^/]+)$')
+    if (device == 'battery_BAT0') then
+        local state = data[3].State
+        if (state ~= nil and state ~= 0) then
+            bat_state = state
+        end
+    end
     vicious.force({mybat})
 end)
 vicious.force({mybat})
 -- }}}
--- {{{ rss liferea
-myrss_icon       = cosy.widget.img()
-myrss_icon.image = beautiful.wibox.rss
-myrss_separator       = cosy.widget.img()
-myrss_separator.image = beautiful.wibox.separator
-myrss = cosy.widget.txt()
+-- {{{ яркость
+mybright_icon            = wibox.widget.imagebox()
+mybright_icon.image      = beautiful.wibox.brightness
+mybright_separator       = wibox.widget.imagebox()
+mybright_separator.image = beautiful.wibox.separator
+mybright                 = wibox.widget.textbox()
+mybrightness_timer       = gears.timer({timeout = 10})
 
-local update_rss = function(unread, new)
-    myrss.text = markup("#aaaaff", unread)
-    if ( unread == 0 ) then
-        myrss_icon.visible      = false
-        myrss.visible           = false
-        myrss_separator.visible = false
+local brightness_path = 'intel_backlight'
+local f = io.open('/sys/class/backlight/'..brightness_path..'/max_brightness')
+local max_brightness = f:read("*a")
+f:close()
+
+update_brightness = function()
+    local f = io.open('/sys/class/backlight/'..brightness_path..'/brightness')
+    local level = f:read("*a")
+    f:close()
+    if (level == max_brightness) then
+    mybright_icon.visible      = false
+    mybright.visible           = false
+    mybright_separator.visible = false
     else
-        myrss_icon.visible      = true
-        myrss.visible           = true
-        myrss_separator.visible = true
+    mybright_icon.visible      = true
+    mybright.visible           = true
+    mybright_separator.visible = true
     end
+    mybright.markup = markup.b(string.format("%.0f", 100*level/max_brightness)..'%')
 end
 
-dbus.add_match("session", "interface='org.gnome.feed.Reader',member='ItemsChanged'")
-dbus.connect_signal("org.gnome.feed.Reader",
-function(...)
-    local data = {...}
-    local sender = data[1]
-    local state  = data[2]
-    update_rss(state.Unread, state.New)
-end)
--- can't wait first event after initializing awesome
-update_rss(
-   tonumber(awful.util.pread('qdbus org.gnome.feed.Reader /org/gnome/feed/Reader org.gnome.feed.Reader.GetUnreadItems 2>/dev/null')) or 0,
-   tonumber(awful.util.pread('qdbus org.gnome.feed.Reader /org/gnome/feed/Reader org.gnome.feed.Reader.GetNewItems    2>/dev/null')) or 0
-)
+mybrightness_timer:connect_signal("timeout", update_brightness)
+update_brightness()
+mybrightness_timer:start()
 -- }}}
 -- {{{ температура
 my_cpu_icon = wibox.widget.imagebox()
 my_cpu_icon:set_image(beautiful.wibox.cpu)
 mythermal_cpu = wibox.widget.textbox()
 vicious.register(mythermal_cpu, vicious.widgets.thermal,
-function (widget, args)
+function(widget, args)
     local t = math.ceil(args[1])
     local therm_color = "#88ff88"
     if ( t >= 79 ) then
@@ -570,19 +493,27 @@ end,
 mythermal_hdd_icon = wibox.widget.imagebox()
 mythermal_hdd_icon:set_image(beautiful.wibox.hdd)
 mythermal_hdd = wibox.widget.textbox()
-vicious.register(mythermal_hdd, vicious.widgets.hddtemp,
-function (widget, args)
-    local t = args["{/dev/sda}"]
-    if (t == nil) then return markup.y("?") end
-    local therm_color = "#88ff88"
-    if ( t >= 50 ) then
-        therm_color = "#ff8888"
-    elseif ( t >= 55 ) then
-        therm_color = "#ffff88"
+local function therm_color_markup(t, warn, crit)
+    if (t == nil) then
+        t = markup.y("?")
+    elseif ( t >= crit ) then
+        t = markup("#ff8888", t..'°')
+    elseif ( t >= warn ) then
+        t = markup("#ffff88", t..'°')
+    else
+        t = markup("#88ff88", t..'°')
     end
-    return markup(therm_color, t..'°')
-end,
-10, 7634)
+    return t
+end
+--vicious.register(mythermal_hdd, vicious.widgets.hddtemp,
+--function(widget, args)
+    --local ta = args["{/dev/sda}"]
+    --local tb = args["{/dev/sdb}"]
+    --ta = therm_color_markup(ta, 40, 45)
+    --tb = therm_color_markup(tb, 50, 55)
+    --return ta..' '..tb
+--end,
+--10, 7634)
 -- }}}
 -- {{{ память, диски
 mymem_icon = wibox.widget.imagebox()
@@ -590,18 +521,18 @@ mymem_icon:set_image(beautiful.wibox.mem)
 
 mymem = wibox.widget.textbox()
 vicious.register(mymem, vicious.widgets.mem,
-function (widget, args)
+function(widget, args)
     local mem, swp = markup.b(args[1]..'%'), ''
     if (args[5] ~= 0) then swp = markup.c(' '..args[5]..'%') end
     return mem..swp
 end,
 10)
 
-mymem:connect_signal(     "mouse::leave", disks.hide )
-mymem_icon:connect_signal("mouse::leave", disks.hide )
+mymem:connect_signal(     "mouse::leave", disksbox.hide )
+mymem_icon:connect_signal("mouse::leave", disksbox.hide )
 
 local disks_control = awful.util.table.join(
-    awful.button({ }, 1, disks.show)
+    awful.button({ }, 1, disksbox.show)
 )
 
 mymem:buttons(disks_control)
@@ -613,7 +544,7 @@ mympd_icon:set_image(beautiful.wibox.mpd.music)
 
 mympd = wibox.widget.textbox()
 vicious.register(mympd, vicious.widgets.mpd,
-    function (widget, args)
+    function(widget, args)
         if args["{state}"] == "Stop" then
             mympd_icon:set_image(beautiful.wibox.mpd.stop)
             return ''
@@ -621,7 +552,7 @@ vicious.register(mympd, vicious.widgets.mpd,
             mympd_icon:set_image(beautiful.wibox.mpd.pause)
             return ''
         else
-            local color_title = "#ff8888"
+            local color_title = "#eeff88"
             if args["{random}"] == 1 then color_title = "#88ff88" end
             mympd_icon:set_image(beautiful.wibox.mpd.play)
             local artist = args["{Artist}"]
@@ -639,41 +570,41 @@ vicious.force({mympd})
 
 local mpd_control = awful.util.table.join(
     awful.button({ }, 1, function()
-        awful.util.spawn("mpc toggle")
+        awful.spawn("mpc toggle")
         -- no need in explicit forcing of vicious widget's update since using mpdcron
         --vicious.force({mympd})
     end),
     awful.button({ }, 3, function()
-        awful.util.spawn("mpc random")
+        awful.spawn("mpc random")
     end),
     awful.button({ }, 4, function()
-        awful.util.spawn("mpc prev")
+        awful.spawn("mpc prev")
     end),
     awful.button({ }, 5, function()
-        awful.util.spawn("mpc next")
+        awful.spawn("mpc next")
     end)
 )
 mympd:buttons(mpd_control)
 mympd_icon:buttons(mpd_control)
 -- }}}
 -- {{{ сеть
-nm_widget = cosy.widget.txt()
-nm_icon = wibox.widget.imagebox()
-nm_icon:set_image(beautiful.wibox.net.nm["none"])
+nm_widget           = wibox.widget.textbox()
+nm_icon             = wibox.widget.imagebox()
+nm_icon.image       = beautiful.wibox.net.nm["none"]
 
-net_icon_up   = cosy.widget.img()
-net_icon_down = cosy.widget.img()
+net_icon_up         = wibox.widget.imagebox()
+net_icon_down       = wibox.widget.imagebox()
 net_icon_up.image   = beautiful.wibox.net.up
 net_icon_down.image = beautiful.wibox.net.down
-mynet = cosy.widget.txt()
+mynet               = wibox.widget.textbox()
 
-local round_net = function(num)
-    local n = tonumber(num)
-    if ((n < 1) and (n > 0)) then return 1 end
-    return math.floor(n + 0.5)
-end
 vicious.register(mynet, vicious.widgets.net,
-function (widget, args)
+function(widget, args)
+    local round_net = function(num)
+        local n = tonumber(num)
+        if ((n < 1) and (n > 0)) then return 1 end
+        return math.floor(n + 0.5)
+    end
     local up_color   = "#88ff88"
     local down_color = "#ff8888"
     local up_speed   = round_net(args["{wlan0 up_kb}"])
@@ -713,30 +644,30 @@ local function nm_update_widget()
         net_icon_down.visible = false
         mynet.visible         = false
         nm_widget.visible     = false
-        nm_icon:set_image(beautiful.wibox.net.nm["none"])
+        nm_icon.image         = beautiful.wibox.net.nm["none"]
     else
         local s = tonumber(nm_ac_table.Strength)
         local c
         if s < 25 then
             c = "#ff8888" -- bad
-            nm_icon:set_image(beautiful.wibox.net.nm["00"])
+            nm_icon.image = beautiful.wibox.net.nm["00"]
         elseif s < 50 then
             c = "#ffff88" -- quite bad
-            nm_icon:set_image(beautiful.wibox.net.nm["25"])
+            nm_icon.image = beautiful.wibox.net.nm["25"]
         elseif s < 75 then
             c = "#88cc88" -- medium
-            nm_icon:set_image(beautiful.wibox.net.nm["50"])
+            nm_icon.image = beautiful.wibox.net.nm["50"]
         elseif s < 100 then
             c = "#88ff88" -- good
-            nm_icon:set_image(beautiful.wibox.net.nm["75"])
+            nm_icon.image = beautiful.wibox.net.nm["75"]
         else
             c = "#88ff88" -- good
-            nm_icon:set_image(beautiful.wibox.net.nm["100"])
+            nm_icon.image = beautiful.wibox.net.nm["100"]
         end
         net_icon_up.visible   = true
         net_icon_down.visible = true
         mynet.visible         = true
-        nm_widget.text = markup.c(nm_ac_table.Ssid)..' '..markup(c, nm_ac_table.Strength..'%')
+        nm_widget.markup      = markup.c(nm_ac_table.Ssid)..' '..markup(c, nm_ac_table.Strength..'%')
         nm_widget.visible     = true
     end
 end
@@ -773,8 +704,8 @@ function(...)
 end)
 -- }}}
 -- {{{ напоминание
-myrem      = cosy.widget.txt()
-myrem_icon = cosy.widget.img()
+myrem      = wibox.widget.textbox()
+myrem_icon = wibox.widget.imagebox()
 myrem_icon.image = beautiful.wibox.rem
 do_remind = false
 local setreminder = function()
@@ -790,7 +721,7 @@ local setreminder = function()
         text = text:gsub("\n$", "")
         io.close(file)
     end
-    myrem:set_markup(markup.r(text))
+    myrem.markup = markup.r(text)
     if (text == '') then
         myrem_icon.visible = false
         myrem.visible      = false
@@ -799,314 +730,758 @@ local setreminder = function()
         myrem.visible      = true
     end
 end
-myrem_timer = timer({timeout = 10})
+myrem_timer = gears.timer({timeout = 30})
 myrem_timer:connect_signal("timeout", setreminder)
 setreminder()
 myrem_timer:start()
 -- }}}
-mypromptbox = {}
-mylayoutbox = {}
-for s = 1, screen.count() do
--- set wallpaper
-gears.wallpaper.maximized(beautiful.wallpaper, s, true)
--- {{{ promptbox, layoutbox, tablist tasklist
-mypromptbox[s] = awful.widget.prompt()
-mylayoutbox[s] = awful.widget.layoutbox(s)
-mylayoutbox[s]:buttons(awful.util.table.join(
-    awful.button({ }, 1, function () awful.layout.inc(layouts,  1) end),
-    awful.button({ }, 3, function () awful.layout.inc(layouts, -1) end),
-    awful.button({ }, 4, function () awful.layout.inc(layouts,  1) end),
-    awful.button({ }, 5, function () awful.layout.inc(layouts, -1) end)
-))
-mytaglist[s]  = awful.widget.taglist( s, awful.widget.taglist.filter.all,          mytaglist.buttons)
---mytasklist[s] = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, mytasklist.buttons)
-mytasklist[s] = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, mytasklist.buttons, nil, tabs.taskupdate)
--- }}}
--- {{{ создание панели
-mywibox[s] = awful.wibox({ position = "top", screen = s, height = beautiful.main_wibox_height })
+-- {{{ погода
+myweather_show      = true
+myweather           = wibox.widget.textbox()
+myweather_icon      = wibox.widget.imagebox()
+myweather_separator = wibox.widget.imagebox()
+myweather_separator.image   = beautiful.wibox.separator
+myweather_separator.visible = false
+myweather_timer = gears.timer({timeout = 300})
+function myweather_update()
+    local time = os.time()
+    local dir_meteo = os.getenv("HOME").."/.local/share/meteo/"
+    local weather = meteo.weather(dir_meteo..'weather.json')
+    local diff = weather.time - time
 
-local layout              = wibox.layout.flex.vertical()
-local top_layout          = wibox.layout.align.horizontal()
-local top_right_layout    = wibox.layout.fixed.horizontal()
-local top_left_layout     = wibox.layout.fixed.horizontal()
-local bottom_layout       = wibox.layout.align.horizontal()
-local bottom_right_layout = wibox.layout.fixed.horizontal()
-local bottom_left_layout  = wibox.layout.fixed.horizontal()
-
-local mywidgets = {
-    [top_layout] = {-- верх
-        [top_left_layout] = {-- верх слева
-            mylauncher,
-            mytaglist[s],
-        },
-        [top_right_layout] = {-- верх справа
-        separator,
-        nm_icon, net_icon_down, mynet, net_icon_up, nm_widget, separator,
-        mymem_icon, mymem, separator,
-        myrss_icon, myrss, myrss_separator,
-        my_cpu_icon, mythermal_cpu, mythermal_hdd_icon, mythermal_hdd, separator,
-        mybat_icon, mybat, mybat_separator,
-        volume.inputs[vin.qemu].imagebox,      volume.inputs[vin.qemu].textbox,          volume.inputs[vin.radiotray].imagebox,
-        volume.inputs[vin.radiotray].textbox,  volume.inputs[vin.flash_plugin].imagebox, volume.inputs[vin.flash_plugin].textbox,
-        volume.inputs[vin.mplayer].imagebox,   volume.inputs[vin.mplayer].textbox,       volume.inputs[vin.mpd].imagebox,
-        volume.inputs[vin.mpd].textbox,        separator,
-        volume.sinks[vss.speakers].imagebox,   volume.sinks[vss.speakers].textbox,   separator,
-        volume.sinks[vss.headphones].imagebox, volume.sinks[vss.headphones].textbox, separator,
-        mydate_icon, mydate, separator,
-        s == 1 and systray_layout or nil,
-        mylayoutbox[s],
-        },
-    },
-    [bottom_layout] = {-- низ
-        [bottom_left_layout] = {-- низ слева
-            mypromptbox[s],
-            mytasklist[s],
-        },
-        [bottom_right_layout] = {-- низ справа
-            myrem_icon, myrem,
-            mympd_icon, mympd,
-        },
-    },
-}
-for _, a in pairs(mywidgets) do
-    for k, b in pairs(a) do
-        for _, v in pairs(b) do
-            if (v) then k:add(v) end
+    if (diff + weather_lag < 0) then -- данные устарели
+        myweather.visible           = false
+        myweather_icon.visible      = false
+        myweather_separator.visible = false
+    else
+        myweather.visible           = myweather_show
+        myweather_icon.visible      = myweather_show
+        myweather_separator.visible = myweather_show
+        if (myweather_show) then
+            myweather.markup = markup.b(weather.temp..'°')
+            myweather_icon.image = beautiful.dirs.weather..weather.icon..'t.png'
         end
     end
 end
-top_layout:set_right(top_right_layout)
-top_layout:set_left(top_left_layout)
+myweather_update()
+myweather_timer:connect_signal("timeout", myweather_update)
+myweather_timer:start()
 
-bottom_layout:set_middle(bottom_left_layout)
-bottom_layout:set_right(bottom_right_layout)
+myweather:connect_signal(     "mouse::leave", meteobox.hide )
+myweather_icon:connect_signal("mouse::leave", meteobox.hide )
 
-layout:add(top_layout)
-layout:add(bottom_layout)
-mywibox[s]:set_widget(layout)
+local meteobox_control = awful.util.table.join(
+    awful.button({ }, 1, meteobox.show)
+)
+
+myweather:buttons(meteobox_control)
+myweather_icon:buttons(meteobox_control)
 -- }}}
+--{{{ taglist_buttons
+local taglist_buttons = awful.util.table.join(
+    awful.button({ },        1, function(t) t:view_only() end),
+    awful.button({ modkey }, 1, function(t) if client.focus then client.focus:move_to_tag(t) end end),
+    awful.button({ },        3, awful.tag.viewtoggle),
+    awful.button({ modkey }, 3, function(t) if client.focus then client.focus:toggle_tag(t) end end),
+    awful.button({ },        4, function(t) awful.tag.viewnext(t.screen) end),
+    awful.button({ },        5, function(t) awful.tag.viewprev(t.screen) end)
+)
+--}}}
+--{{{ tasklist_buttons
+local tasklist_buttons = awful.util.table.join(
+    awful.button({ }, 1, function(c)
+        if c == client.focus then
+            c.minimized = true
+        else
+            c.minimized = false
+            if not c:isvisible() and c.first_tag then
+                c.first_tag:view_only()
+            end
+            client.focus = c
+            c:raise()
+        end
+    end),
+    awful.button({ }, 3, client_menu_toggle_fn()),
+    awful.button({ }, 4, function() awful.client.focus.byidx( 1) end),
+    awful.button({ }, 5, function() awful.client.focus.byidx(-1) end)
+)
+--}}}
+awful.screen.connect_for_each_screen(
+function(s)
+    set_wallpaper(s)
+--{{{ promptbox, layoutbox, taglist, tasklist
+    s.mypromptbox = awful.widget.prompt()
+    s.mylayoutbox = awful.widget.layoutbox(s)
+    s.mylayoutbox:buttons(awful.util.table.join(
+        awful.button({ }, 1, function() awful.layout.inc(layouts,  1) end),
+        awful.button({ }, 3, function() awful.layout.inc(layouts, -1) end),
+        awful.button({ }, 4, function() awful.layout.inc(layouts,  1) end),
+        awful.button({ }, 5, function() awful.layout.inc(layouts, -1) end)
+    ))
+
+    s.mytaglist  = awful.widget.taglist(s, awful.widget.taglist.filter.all, taglist_buttons)
+    --s.mytasklist = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, tasklist_buttons)
+    s.mytasklist = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, tasklist_buttons, nil, tabular.taskupdate)
+--}}}
+--{{{ создание панели
+    s.mywibox = awful.wibar({ position = "top", screen = s, height = beautiful.main_wibox_height })
+
+    local whole_layout        = wibox.layout.flex.vertical()
+    local top_layout          = wibox.layout.align.horizontal()
+    local top_right_layout    = wibox.layout.fixed.horizontal()
+    local top_left_layout     = wibox.layout.fixed.horizontal()
+    local bottom_layout       = wibox.layout.align.horizontal()
+    local bottom_right_layout = wibox.layout.fixed.horizontal()
+    local bottom_left_layout  = wibox.layout.fixed.horizontal()
+
+    local left, middle, right, top, bottom = 1, 2, 3, 1, 3
+    s.mywibox:setup(
+    {
+        layout = whole_layout,
+        [top] =
+        {
+            layout = top_layout,
+            [left] =
+            {
+                layout = top_left_layout,
+                mylauncher,
+                s.mytaglist,
+            },
+            [middle] = nil,
+            [right] =
+            {
+                layout = top_right_layout,
+                separator,
+                nm_icon, net_icon_down, mynet, net_icon_up, nm_widget, separator,
+                mymem_icon, mymem, separator,
+                my_cpu_icon, mythermal_cpu,
+                --mythermal_hdd_icon, mythermal_hdd, separator,
+                separator,
+                mybright_icon, mybright, mybright_separator,
+                mybat_icon, mybat, mybat_separator,
+                volume.inputs[vin.qemu].imagebox,         volume.inputs[vin.qemu].textbox,
+                volume.inputs[vin.radiotray].imagebox,    volume.inputs[vin.radiotray].textbox,
+                volume.inputs[vin.flash_plugin].imagebox, volume.inputs[vin.flash_plugin].textbox,
+                volume.inputs[vin.vlc].imagebox,          volume.inputs[vin.vlc].textbox,
+                volume.inputs[vin.mplayer].imagebox,      volume.inputs[vin.mplayer].textbox,
+                volume.inputs[vin.mpd].imagebox,          volume.inputs[vin.mpd].textbox,
+                separator,
+                volume.sinks[vss.ladspa].imagebox,
+                volume.sinks[vss.speakers].imagebox,   volume.sinks[vss.speakers].textbox,   separator,
+                volume.sinks[vss.headphones].imagebox, volume.sinks[vss.headphones].textbox, separator,
+                myweather_icon, myweather, myweather_separator,
+                mydate_icon, mydate,
+                s.index == 1 and systray_layout or nil,
+                s.mylayoutbox,
+            },
+        },
+        [middle] = nil,
+        [bottom] =
+        {
+            layout = bottom_layout,
+            [left] =
+            {
+                layout = bottom_left_layout,
+                mykeyboardlayout,
+                s.mypromptbox,
+            },
+            [middle] = s.mytasklist,
+            [right] =
+            {
+                layout = bottom_right_layout,
+                myrem_icon, myrem,
+                mympd_icon, mympd,
+            },
+        }
+    })
+--}}}
+end)
+-- }}}
+--{{{ tyrannical
+tyrannical.settings.block_children_focus_stealing = true
+tyrannical.settings.group_children = true
+--tyrannical.settings.no_focus_stealing_out = true
+tyrannical.settings.default_layout = als.tabular
+--{{{ tyrannical tags
+mytags =
+{
+    {
+        name      = "1",
+        icon      = "terminal.png",
+        class     = {"URxvt"},
+        init      = true,
+        volatile  = false,
+    },
+    {
+        name      = "2",
+        icon      = "ff.png",
+        class     = {"Firefox", "Google-chrome"},
+        --spawn     = 'browser',
+        spawn     = 'google-chrome-stable',
+    },
+    {
+        name      = "3",
+        icon      = "idea.png",
+        class     = {"jetbrains-idea"},
+    },
+    {
+        name      = "4",
+        icon      = "dict.png",
+        class     = {"GoldenDict"},
+        spawn     = 'goldendict',
+        --no_focus_stealing_in = true,
+    },
+    {
+        name      = "5",
+        icon      = "mplayer.png",
+        class     = {"mpv", "Vlc", "Gupnp-av-cp", "plugin-container", "Sxiv", "Geeqie"},
+    },
+    {
+        name      = "6",
+        icon      = "deluge.png",
+        class     = {"Deluge"},
+        spawn     = 'deluge-gtk',
+    },
+    {
+        name      = "7",
+        icon      = "audio.png",
+        class     = {"cantata"},
+        spawn     = 'cantata',
+    },
+    {
+        name      = "8",
+        icon      = "vim.png",
+        class     = {"Emacs", "Gvim"},
+    },
+    {
+        name      = "9",
+        icon      = "pride.png",
+        class     = {"Pride", "com.github.liaonau.Main"},
+    },
+    {
+        name      = "0",
+        icon      = "reader.png",
+        class     = {"Zathura", "Djview", "Evince", "Qpdfview", "fbreader"},
+    },
+    {
+        name      = "a",
+        icon      = "emul.png",
+        layout    = als.fair,
+        instance  = {"Wine", "Remote-viewer", "Xephyr"},
+    },
+    {
+        name      = "b",
+        icon      = "logview.png",
+        instance  = {"logTerminal"},
+        spawn     = terminal.." -cr black -rv -name logTerminal -e /bin/sh -c '/usr/bin/journalctl -b -n 39 -f | ccze -A -m ansi'",
+    },
+    {
+        name      = "c",
+        icon      = "terminal-aux.png",
+        instance  = {"urxvt-aux"},
+        spawn     = 'urxvt-aux',
+    },
+    {
+        name      = "g",
+        icon      = "openmw.png",
+        class     = {"Steam", "openmw"},
+    },
+    {
+        name      = "i",
+        icon      = "htop.png",
+        instance  = {"htopTerminal"},
+        spawn     = terminal.." -name htopTerminal -e htop",
+    },
+    {
+        name      = "o",
+        icon      = "oo.png",
+        class     = {"OpenOffice"},
+    },
+    {
+        name      = "p",
+        icon      = "im.png",
+        class     = {"Skype", "ViberPC", "Pidgin", "Telegram", "Xchat"},
+        spawn     = 'Viber',
+    },
+    {
+        name      = "q",
+        icon      = "gear.png",
+        class     = {"JavaFXSceneBuilder", "com-install4j-runtime", "Staruml", "com-mathworks-util-PostVMIni", "MATLAB"},
+    },
+    {
+        name      = "t",
+        icon      = "clock.png",
+        class     = {"Pavucontrol", "Parcellite", "Blueman-manager"},
+        init      = true,
+        exclusive = false,
+        volatile  = false,
+    },
+    {
+        name      = "v",
+        icon      = "apps.png",
+        init      = true,
+        exclusive = false,
+        volatile  = false,
+        fallback  = true,
+    },
+}
+
+for k, v in pairs(mytags) do
+    if (v.icon) then
+        v.icon = beautiful.dirs.tags .. v.icon
+    end
+    v.screen = 1
+    if (v.init      == nil) then v.init      = false    end
+    if (v.volatile  == nil) then v.volatile  = true     end
+    if (v.exclusive == nil) then v.exclusive = true     end
+    if (v.key       == nil) then v.key       = v.name   end
 end
--- }}}}}} Wibox
--- {{{ global mouse buttons
+
+tyrannical.tags = mytags
+--}}}
+--tyrannical.properties.intrusive = { "pinentry", "gtksu", }
+--tyrannical.properties.floating = { "pinentry", "gtksu", }
+--tyrannical.properties.ontop = { "Xephyr", }
+--tyrannical.properties.placement = { kcalc = awful.placement.centered }
+--tyrannical.properties.size_hints_honor = { xterm = false, URxvt = false }
+--}}}
+-- {{{ global mouse bindings
 root.buttons(awful.util.table.join(
-    awful.button({ }, 3, function () mymainmenu:show() end),
+    awful.button({ }, 3, function() mymainmenu:toggle() end),
     awful.button({ }, 4, awful.tag.viewnext),
     awful.button({ }, 5, awful.tag.viewprev)
 ))
 -- }}}
--- {{{ clientbuttons
+-- {{{ client mouse bindings
 clientbuttons = awful.util.table.join(
-    awful.button({        }, 1, function (c) client.focus = c; c:raise() end),
+    awful.button({        }, 1, function(c) client.focus = c; c:raise() end),
     awful.button({ modkey }, 1, awful.mouse.client.move),
     awful.button({ modkey }, 3, awful.mouse.client.resize)
 )
 -- }}}
 -- {{{ clientkeys
 clientkeys = awful.util.table.join(
-    awful.key({ modkey, "Shift"   }, "x",
-    function (c)
-        local text = markup.monospace(markup.g('class    '))..c.class
+    awful.key({ modkey, "Shift" }, "x",
+    function(c)
+        local text = ''
+        if (c.class    ~= nil) then text=text..'\n'..markup.monospace(markup.g('class    '))..c.class    end
         if (c.instance ~= nil) then text=text..'\n'..markup.monospace(markup.b('instance '))..c.instance end
-        if (c.role ~= nil) then text=text..'\n'..markup.monospace(markup.y('role     '))..c.role end
-        naughty.notify({title='xprop', text=text, timeout=10})
+        if (c.role     ~= nil) then text=text..'\n'..markup.monospace(markup.y('role     '))..c.role     end
+        if (c.window   ~= nil) then text=text..'\n'..markup.monospace(markup.m('Window   '))..c.window   end
+        if (c.pid      ~= nil) then text=text..'\n'..markup.monospace(markup.m('PID      '))..c.pid      end
+        naughty.notify({ icon='xorg', title='xprop', text=text, timeout=10 })
     end),
-    awful.key({ modkey,           }, "f",         function (c) c.fullscreen = not c.fullscreen  end),
-    awful.key({ modkey,           }, "d",         function (c) c:kill()                         end),
-    awful.key({ modkey, "Control" }, "backslash", awful.client.floating.toggle                     ),
-    awful.key({ modkey, "Control" }, "Return",    function (c) c:swap(awful.client.getmaster()) end),
-    awful.key({ modkey,           }, "t",         function (c) c.ontop = not c.ontop            end),
-    awful.key({ modkey,           }, "n",
-    function (c)
-        -- The client currently has the input focus, so it cannot be
-        -- minimized, since minimized clients can't have the focus.
-        c.minimized = true
-    end),
-    awful.key({ modkey,           }, "m",
-    function (c)
-        c.maximized_horizontal = not c.maximized_horizontal
-        c.maximized_vertical   = not c.maximized_vertical
-    end)
+    awful.key({modkey,          }, "d",      function(c) c:kill() end),
+    awful.key({modkey, "Control"}, "Return", function(c) c:swap(awful.client.getmaster()) end),
+    awful.key({modkey,          }, "f",      function(c) c.fullscreen = not c.fullscreen; c:raise() end),
+    awful.key({modkey, "Shift"  }, "f",      function(c )awful.client.floating.toggle(); c:geometry({x = 0, y = beautiful.main_wibox_height}) end),
+    awful.key({modkey, "Control"}, "f",      function(c) c.ontop = not c.ontop end),
+    awful.key({modkey, "Shift"  }, "n",      function(c) c.maximized = not c.maximized; c:raise() end),
+    awful.key({modkey,          }, "n",      function(c) c.minimized = true end),
+    awful.key({modkey, "Control"}, "r",      function(c) move_resize.callback(c, {modkey, "Control"}, "r") end)
 )
-shifty.config.clientkeys = clientkeys
 -- }}}
--- {{{ rules
-awful.rules.rules = {
-    -- All clients will match this rule.
-    {
-        rule = {},
-        properties = {
-            border_width = beautiful.border_width,
-            border_color = beautiful.border_normal,
-            focus        = true,
-            keys         = clientkeys,
-            buttons      = clientbuttons
-        }
-    },
-}
--- }}}
--- {{{{{{ globalkeys
+-- {{{ globalkeys
 globalkeys = awful.util.table.join(
-    awful.key({ modkey,           }, "s",      mywibox.toggle),
+--{{{ wibar, tray and menu
+    awful.key({ modkey,           }, "s",
+    function()
+        awful.screen.connect_for_each_screen(function(s) s.mywibox.visible = not s.mywibox.visible end)
+    end),
     awful.key({ modkey, "Shift"   }, "s",      systray.toggle),
-    awful.key({ modkey, "Control" }, "s",      function () do_remind = not do_remind; setreminder() end),
-    awful.key({ modkey, "Control" }, "k",      function () awful.util.spawn("xkill") end),
-    awful.key({ modkey,           }, "Escape", function () mymainmenu:show({keygrabber=true}) end),
+    awful.key({ modkey, "Control" }, "s",      function() do_remind      = not do_remind;      setreminder()      end),
+    awful.key({ modkey, "Mod1"    }, "s",      function() myweather_show = not myweather_show; myweather_update() end),
+    awful.key({ modkey,           }, "Escape", function() mymainmenu:show({keygrabber=true})                      end),
+    awful.key({ modkey, "Control" }, "Escape", menubar.show),
+--}}}
 -- {{{ layout and client
-    awful.key({ modkey,           }, ".",
-    function ()
-        awful.client.focus.byidx( 1)
-        if client.focus then client.focus:raise() end
-    end),
-    awful.key({ modkey,           }, ",",
-    function ()
-        awful.client.focus.byidx(-1)
-        if client.focus then client.focus:raise() end
-    end),
-    awful.key({ modkey,           }, "Tab",
-    function ()
-        awful.client.focus.history.previous()
-        if client.focus then client.focus:raise() end
-    end),
-    awful.key({ modkey,           }, "e",
-    function ()
-        awful.client.focus.history.previous()
-        if client.focus then client.focus:raise() end
-    end),
-    awful.key({ modkey, "Control" }, "n", awful.client.restore),
+    awful.key({ modkey,           }, ".",   function() awful.client.focus.byidx( 1) end),
+    awful.key({ modkey,           }, ",",   function() awful.client.focus.byidx(-1) end),
+    awful.key({ modkey,           }, "Tab", function() awful.client.focus.history.previous(); if client.focus then client.focus:raise() end end),
+    awful.key({ modkey,           }, "e",   function() awful.client.focus.history.previous(); if client.focus then client.focus:raise() end end),
 
-    awful.key({ modkey, "Shift"   }, ".",         function () awful.client.swap.byidx(  1)    end),
-    awful.key({ modkey, "Shift"   }, ",",         function () awful.client.swap.byidx( -1)    end),
-    awful.key({ modkey, "Control" }, ".",         function () awful.screen.focus_relative( 1) end),
-    awful.key({ modkey, "Control" }, ",",         function () awful.screen.focus_relative(-1) end),
+    awful.key({ modkey, "Control" }, "n",   function() local c = awful.client.restore(); if c then client.focus = c; c:raise() end end),
+
+    awful.key({ modkey, "Shift"   }, ".",         function() awful.client.swap.byidx(  1)    end),
+    awful.key({ modkey, "Shift"   }, ",",         function() awful.client.swap.byidx( -1)    end),
+    awful.key({ modkey, "Control" }, ".",         function() awful.screen.focus_relative( 1) end),
+    awful.key({ modkey, "Control" }, ",",         function() awful.screen.focus_relative(-1) end),
     awful.key({ modkey,           }, "u",         awful.client.urgent.jumpto),
-    awful.key({ modkey,           }, "BackSpace", function () awful.layout.inc(layouts,  1) end),
-    awful.key({ modkey, "Shift"   }, "BackSpace", function () awful.layout.inc(layouts, -1) end),
-    awful.key({ modkey, "Control" }, "BackSpace", function () awful.layout.set(shifty.config.tags[awful.tag.selected().name].layout) end),
+    awful.key({ modkey,           }, "BackSpace", function() awful.layout.inc(layouts,  1) end),
+    awful.key({ modkey, "Shift"   }, "BackSpace", function() awful.layout.inc(layouts, -1) end),
+    awful.key({ modkey, "Control" }, "BackSpace",
+    function()
+        local name = awful.tag.selected().name
+        --local layout = shifty.config.defaults.layout
+        --if (shifty.config.tags[name].layout) then
+            --layout = shifty.config.tags[name].layout
+        --end
+        --awful.layout.set(layout)
+    end),
     awful.key({ modkey,           }, "backslash",
-    function ()
+    function()
         local cl = awful.layout.get(mouse.screen)
         if (cl == als.tile.top) then
-            awful.layout.set(als.tabs)
+            awful.layout.set(als.tabular)
         else
             awful.layout.set(als.tile.top)
         end
     end),
 -- }}}
 -- {{{ Standard programs
-    awful.key({ modkey,           }, "Return", function () awful.util.spawn(terminal) end),
-    awful.key({ modkey, "Control"          }, "r",      awesome.restart),
-    awful.key({ modkey, "Shift", "Control" }, "r",      awesome.quit),
+    awful.key({ modkey,           }, "Return", function() awful.spawn(terminal) end),
+    awful.key({ modkey, "Control" }, "x",      awesome.restart),
 -- }}}
 -- {{{ tags
-    awful.key({ modkey,           }, "l",     function () awful.tag.incmwfact( 0.05) end),
-    awful.key({ modkey,           }, "h",     function () awful.tag.incmwfact(-0.05) end),
-    awful.key({ modkey, "Shift"   }, "h",     function () awful.tag.incnmaster( 1)   end),
-    awful.key({ modkey, "Shift"   }, "l",     function () awful.tag.incnmaster(-1)   end),
-    awful.key({ modkey, "Control" }, "h",     function () awful.tag.incncol( 1)      end),
-    awful.key({ modkey, "Control" }, "l",     function () awful.tag.incncol(-1)      end),
+    awful.key({ modkey,           }, "h",     function() awful.tag.incmwfact( 0.05) end),
+    awful.key({ modkey,           }, "l",     function() awful.tag.incmwfact(-0.05) end),
+    awful.key({ modkey, "Shift"   }, "h",     function() awful.tag.incnmaster( 1, nil, true) end),
+    awful.key({ modkey, "Shift"   }, "l",     function() awful.tag.incnmaster(-1, nil, true) end),
+    awful.key({ modkey, "Control" }, "h",     function() awful.tag.incncol( 1, nil, true) end),
+    awful.key({ modkey, "Control" }, "l",     function() awful.tag.incncol(-1, nil, true) end),
     awful.key({ modkey,           }, "Left",  awful.tag.viewprev),
     awful.key({ modkey,           }, "Right", awful.tag.viewnext),
     awful.key({ modkey,           }, "j",     awful.tag.viewprev),
     awful.key({ modkey,           }, "k",     awful.tag.viewnext),
-    awful.key({ modkey,           }, "w",     awful.tag.history.restore),
+    awful.key({ modkey,           }, "w",
+    function()
+        awful.tag.history.restore()
+        if (awful.screen.focused().selected_tag == nil) then
+            awful.tag.history.restore()
+        end
+    end),
 -- }}}
 -- {{{ Prompts
     awful.key({ modkey }, "r",
-    function ()
+    function()
         awful.prompt.run(
         {
-            prompt    = markup.bg("#88ffff", markup.d("Run: ")),
-            font      = theme.font12,
-            fg_cursor = "black",
-            bg_cursor = "cyan",
-        },
-        mypromptbox[mouse.screen].widget,
-        awful.util.spawn, awful.completion.shell,
-        awful.util.getdir("cache") .. "/history")
+            prompt              = markup.bg("#88ffff", markup.d("Run: ")),
+            font                = theme.font12,
+            fg_cursor           = "black",
+            bg_cursor           = "cyan",
+            textbox             = awful.screen.focused().mypromptbox.widget,
+            exe_callback        = awful.spawn.spawn,
+            completion_callback = awful.completion.shell,
+            history_path        = awful.util.get_cache_dir() .. "/history"
+        })
     end),
 
     awful.key({ modkey }, "x",
-    function ()
+    function()
         awful.prompt.run(
         {
-            prompt    = markup.bg("#88ffff", markup.d("Run Lua code: ")),
-            font      = theme.font12,
-            fg_cursor = "black",
-            bg_cursor = "cyan",
-        },
-        mypromptbox[mouse.screen].widget,
-        awful.util.eval, nil,
-        awful.util.getdir("cache") .. "/history_eval")
+            prompt       = markup.bg("#88ffff", markup.d("Run Lua code: ")),
+            font         = theme.font12,
+            fg_cursor    = "black",
+            bg_cursor    = "cyan",
+            textbox      = awful.screen.focused().mypromptbox.widget,
+            exe_callback = awful.util.eval,
+            history_path = awful.util.get_cache_dir() .. "/history_eval"
+        })
     end),
 -- }}}
 -- {{{ infoboxes
-    awful.key({ modkey, }, "z",
+    awful.key({ modkey,           }, "z",
     function()
         local word = selection():gsub("^([^\n]*)\n.*", "%1"):gsub("^(%s+)", ""):gsub("<", "«"):gsub(">", "»")
-        awful.util.spawn("goldendict '"..word.."'")
+        awful.spawn("goldendict '"..word.."'")
     end),
-    awful.key({ modkey, }, "g", gismeteo.toggle)
+    awful.key({ modkey, "Control" }, "z", meteobox.toggle),
+    awful.key({ modkey, "Shift"   }, "z", disksbox.toggle)
 -- }}}
 )
--- {{{ tag_keys для shifty
-local function tags_keys(i, p)
+-- }}}
+--{{{ tags keys для tyrannical
+local function lookup_tag_by_name(s, n)
+    for k, v in ipairs(s.tags) do
+        if v.name == n then
+            return v
+        end
+    end
+end
+
+local function lookup_tyrannical_tag_by_name(name, callback)
+    for k, v in pairs(mytags) do
+        if v.name == name then
+            callback(v)
+            break
+        end
+    end
+end
+
+local function tag_key(key, name)
     globalkeys = awful.util.table.join(
         globalkeys,
-        awful.key({ modkey, }, i,
-        function ()
-            local t = awful.tag.viewonly(shifty.getpos(p))
-        end),
-        awful.key({ modkey, "Control" }, i,
-        function ()
-            local t = shifty.getpos(p)
-            t.selected = not t.selected
-        end),
-        awful.key({ modkey, "Control", "Shift" }, i,
-        function ()
-            if client.focus then
-                awful.client.toggletag(shifty.getpos(p))
+        awful.key({ modkey, }, key,
+        function()
+            local screen = awful.screen.focused()
+            local tag = lookup_tag_by_name(screen, name)
+            if tag then
+                tag:view_only()
+            else
+                lookup_tyrannical_tag_by_name(name,
+                function(v)
+                    if (v.spawn) then
+                        awful.tag.add(v.name, v)
+                        awful.spawn(v.spawn)
+                    end
+                end)
             end
         end),
-        -- move clients to other tags
-        awful.key({ modkey, "Shift" }, i,
-        function ()
+        awful.key({ modkey, "Control" }, key,
+        function()
+            local screen = awful.screen.focused()
+            local tag = lookup_tag_by_name(screen, name)
+            if tag then
+                awful.tag.viewtoggle(tag)
+            end
+        end),
+        awful.key({ modkey, "Control", "Shift" }, name,
+        function()
             if client.focus then
-                local t = shifty.getpos(p)
-                awful.client.movetotag(t)
-                awful.tag.viewonly(t)
+                local tag = lookup_tag_by_name(client.focus.screen, name)
+                if tag then
+                    client.focus:toggle_tag(tag)
+                end
+            end
+        end),
+        awful.key({ modkey, "Shift" }, key,
+        function()
+            if client.focus then
+                local tag = lookup_tag_by_name(client.focus.screen, name)
+                if not tag then
+                    lookup_tyrannical_tag_by_name(name,
+                    function(v)
+                        tag = awful.tag.add(v.name, v)
+                    end)
+                end
+                if tag then
+                    client.focus:move_to_tag(tag)
+                    --awful.tag.viewtoggle(tag)
+                    tag:view_only()
+                end
             end
         end)
     )
 end
-for i=1,9 do
-    tags_keys(i, i)
+for k, v in pairs(mytags) do
+    tag_key(v.key, v.name)
 end
-tags_keys(0  , 10)
-tags_keys("b", 11)
-tags_keys("i", 12)
-tags_keys("a", 13)
-tags_keys("q", 14)
-tags_keys("p", 15)
-tags_keys("c", 17)
-tags_keys("v", 18)
-tags_keys("o", 20)
--- }}}
---{{{ tabs_keys для эмуляции табов
-local function tabs_keys(i)
-    globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey, }, "F"..i, function() tabs.focus(i, mouse.screen) end))
+--}}}
+--{{{ tabular_keys для эмуляции табов
+local function tabular_keys(i)
+    globalkeys = awful.util.table.join(globalkeys, awful.key({ modkey, }, "F"..i, function() tabular.focus(i, mouse.screen) end))
 end
-for i=1,12 do
-    tabs_keys(i)
+for i= 1, 10 do
+    tabular_keys(i)
 end
 --}}}
 root.keys(globalkeys)
-shifty.config.globalkeys = globalkeys
--- }}}}}}
--- {{{ Signals
--- Signal function to execute when a new client appears.
---client.connect_signal("manage",  function(c, startup) end)
---client.connect_signal("focus",   function(c) c.border_color = beautiful.border_focus  end)
---client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
-tabs.manage_reorder()
+-- {{{ rules
+local wm_class_remaps =
+{
+    ["^OpenOffice.*"] =         {newclass = "OpenOffice"},
+    ["^com.github.liaonau.*"] = {newclass = "Pride"},
+}
+
+local function redecide_tag(c, pattern)
+    --if (c.class:match(pattern)) then
+        local newclass = wm_class_remaps[pattern].newclass
+        local tag_name = wm_class_remaps[pattern].tag_name
+        naughty.notify({ icon='xorg', title=c.class, text=newclass, timeout=10 })
+        awful.spawn('xdotool set_window --class "'..newclass..'" '..c.window)
+        if (tag_name == nil) then
+            local stop = false
+            for _, v in pairs(mytags) do
+                if (v.class) then
+                    for _, cls in pairs(v.class) do
+                        if cls == newclass then
+                            tag_name = v.name
+                            wm_class_remaps[pattern].tag_name = tag_name
+                            stop = true
+                            break
+                        end
+                    end
+                end
+                if stop then
+                    break
+                end
+            end
+        end
+        if (tag_name ~= nil) then
+            local tag = lookup_tag_by_name(client.focus.screen, tag_name)
+            if not tag then
+                lookup_tyrannical_tag_by_name(tag_name, function(v) tag = awful.tag.add(v.name, v) end)
+            end
+            if tag then
+                c:move_to_tag(tag)
+                --awful.tag.history.restore(c.screen, 1)
+                tag:view_only()
+            end
+        end
+    --end
+end
+
+awful.rules.rules =
+{
+    {
+        rule = {},
+        properties =
+        {
+            border_width      = beautiful.border_width,
+            border_color      = beautiful.border_normal,
+            focus             = false,
+            --focus             = awful.client.focus.filter,
+            --raise             = true,
+            keys              = clientkeys,
+            buttons           = clientbuttons,
+            screen            = awful.screen.preferred,
+            placement         = awful.placement.no_overlap+awful.placement.no_offscreen,
+            size_hints_honor  = false,
+            titlebars_enabled = false,
+        },
+    },
+
+    {
+        rule_any = {type = {"dialog"}},
+        properties = { ontop = true }
+    },
+
+    {
+        rule = {class = "Zenity"},
+        properties = { floating = true, above=true, intrusive=true, ontop=true, skip_taskbar=true }
+    },
+
+    {
+        rule = {class = "GoldenDict"},
+        properties = { intrusive=true,  skip_taskbar=true,  floating = true,  ontop = true }
+    },
+    {
+        rule = {role = "GoldenDict_Main_Window"},
+        properties = { intrusive=false, skip_taskbar=false, floating = false, ontop = false }
+    },
+
+    {
+        rule_any = {name = {"Event Tester"}},
+        properties = { intrusive = true, floating = true, ontop = true }
+    },
+}
+
+for k, _ in pairs(wm_class_remaps) do
+    table.insert(awful.rules.rules,
+    {
+        rule     = {class = k},
+        callback = function(c) redecide_tag(c, k) end
+    })
+end
 -- }}}
--- vim: foldmethod=marker:filetype=lua
+-- {{{ signals
+--{{{ manage
+client.connect_signal("manage",
+function(c)
+    if awesome.startup and not c.size_hints.user_position and not c.size_hints.program_position then
+        awful.placement.no_offscreen(c)
+    end
+end)
+--}}}
+--{{{ titlebars
+client.connect_signal("request::titlebars",
+function(c)
+    if (awful.titlebar(c).initialized) then
+        return
+    end
+    local buttons = awful.util.table.join(
+    awful.button({ }, 1,
+    function()
+        client.focus = c
+        c:raise()
+        awful.mouse.client.move(c)
+    end),
+    awful.button({ }, 3,
+    function()
+        client.focus = c
+        c:raise()
+        awful.mouse.client.resize(c)
+    end)
+    )
+
+    awful.titlebar(c):setup
+    {
+        {
+            awful.titlebar.widget.iconwidget(c),
+            buttons = buttons,
+            layout  = wibox.layout.fixed.horizontal
+        },
+        {
+            {
+                align  = "center",
+                widget = awful.titlebar.widget.titlewidget(c)
+            },
+            buttons = buttons,
+            layout  = wibox.layout.flex.horizontal
+        },
+        {
+            awful.titlebar.widget.floatingbutton (c),
+            awful.titlebar.widget.maximizedbutton(c),
+            awful.titlebar.widget.stickybutton   (c),
+            awful.titlebar.widget.ontopbutton    (c),
+            awful.titlebar.widget.closebutton    (c),
+            layout = wibox.layout.fixed.horizontal()
+        },
+        layout = wibox.layout.align.horizontal
+    }
+    awful.titlebar(c).initialized = true
+end)
+--}}}
+--{{{ focus
+--sloppy focus
+client.connect_signal("mouse::enter",
+function(c)
+    if awful.layout.get(c.screen) ~= awful.layout.suit.magnifier
+        and awful.client.focus.filter(c) then
+        client.focus = c
+    end
+end)
+client.connect_signal("focus",   function(c) c.border_color = beautiful.border_focus  end)
+client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
+--}}}
+--{{{ floating clients with titlebars
+client.connect_signal("property::floating",
+function(c)
+    if c.floating then
+        c:emit_signal("request::titlebars")
+        awful.titlebar.show(c)
+    else
+        awful.titlebar.hide(c)
+    end
+end)
+--}}}
+screen.connect_signal("property::geometry", set_wallpaper)
+awesome.connect_signal("xkb::group_changed", update_keyboard_layout);
+
+--local function reorder_tags(c)
+    --naughty.notify({ title=c.class, text='', timeout=10 })
+--end
+--screen.connect_signal("client::tagged",   reorder_tags)
+--screen.connect_signal("client::untagged", reorder_tags)
+tabular.manage_reorder()
+-- }}}
+--{{{ initial calls
+local function initial_calls()
+    update_keyboard_layout()
+end
+
+initial_calls()
+--}}}
+-- {{{ suspend/resume hook
+function suspend_hook()
+end
+
+function resume_hook()
+    volume.update_all()
+    myweather_update()
+    update_brightness()
+    nm_update_widget()
+end
+-- }}}

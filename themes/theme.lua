@@ -12,7 +12,7 @@ local rawset = rawset
 local path = awful.util.getdir("config").."/themes/"
 local wb   = path..'wibox/'
 
-theme.main_wibox_height = "38"
+theme.main_wibox_height = "40"
 
 theme.font          = "Bitstream Vera sans 10"
 theme.bg_normal     = "#222222"
@@ -91,7 +91,7 @@ theme.titlebar_maximized_button_normal_active   = path.."titlebar/maximized_norm
 theme.titlebar_maximized_button_focus_active    = path.."titlebar/maximized_focus_active.png"
 
 theme.wibox = {}
-theme.wibox.separator = wb.."separator.png"
+theme.wibox.separator = wb.."separator.svg"
 theme.wibox.mpd = {
     ["music"]   = wb.."player/music.png",
     ["play"]    = wb.."player/start.png",
@@ -100,10 +100,10 @@ theme.wibox.mpd = {
     ["shuffle"] = wb.."player/shuffle.png",
     ["repeat"]  = wb.."player/repeat.png",
 }
-theme.wibox.cpu = wb.."processor.png"
-theme.wibox.hdd = wb.."drive.png"
-theme.wibox.rss = wb.."rss.png"
---theme.wibox.bat = wb.."bat.png"
+theme.wibox.cpu  = wb.."processor.png"
+theme.wibox.hdd  = wb.."drive.png"
+theme.wibox.rss  = wb.."rss.png"
+theme.wibox.mail = wb.."mail.png"
 theme.wibox.battery = {
     ["000"]     = wb.."battery/000.png",
     ["000_c"]   = wb.."battery/000_c.png",
@@ -119,6 +119,7 @@ theme.wibox.battery = {
     ["100"]     = wb.."battery/100.png",
     ["missing"] = wb.."battery/missing.png",
 }
+theme.wibox.brightness = wb.."brightness.png"
 theme.wibox.net = {
     nm = {
         ["none"] = wb.."net/nm/none.png",
@@ -137,12 +138,26 @@ theme.wibox.volume = {
     dim     = wb.."volume/vol-dim.png",
     mutedim = wb.."volume/vol-mute-dim.png",
     -- headphones
-    ["alsa_output.usb-Logitech_Logitech_Wireless_Headset_000D44D39CAA-00-Headset.analog-stereo"] =
+    ["alsa_output.usb-Logitech_Logitech_Wireless_Headset_000D44D39CAA-00.analog-stereo"] =
     {
         volume  = wb.."volume/headphones.png",
         mute    = wb.."volume/headphones-mute.png",
         dim     = wb.."volume/headphones-dim.png",
         mutedim = wb.."volume/headphones-mute-dim.png",
+    },
+    ["ladspa_sink"] =
+    {
+        volume  = wb.."volume/ladspa.png",
+        mute    = wb.."volume/ladspa-mute.png",
+        dim     = wb.."volume/ladspa-dim.png",
+        mutedim = wb.."volume/ladspa-mute-dim.png",
+    },
+    ["ladspa_normalized_sink"] =
+    {
+        volume  = wb.."volume/ladspa.png",
+        mute    = wb.."volume/ladspa-mute.png",
+        dim     = wb.."volume/ladspa-dim.png",
+        mutedim = wb.."volume/ladspa-mute-dim.png",
     },
     clients =
     {
@@ -153,6 +168,7 @@ theme.wibox.volume = {
         ["ALSA plug-in [plugin-container]"] = wb.."volume/clients/ff.png",
         ["radiotray"]                       = wb.."volume/clients/radiotray.png",
         ["qemu-system-x86_64"]              = wb.."volume/clients/qemu.png",
+        ["VLC media player (LibVLC 2.1.4)"] = wb.."volume/clients/vlc.png",
     },
 }
 theme.wibox.date        = wb.."time.png"
@@ -167,13 +183,14 @@ theme.wibox.dict        = wb.."dict.png"
 theme.wibox.rem         = wb.."remind.png"
 
 theme.wallpaper = path.."wallpaper/earthwater.jpg"
+--theme.wallpaper = path.."wallpaper/youbeta.jpg"
 
 -- You can use your own layout icons like this:
 theme.layout_fairh      = path.."layouts/fairhw.png"
 theme.layout_fairv      = path.."layouts/fairvw.png"
 theme.layout_floating   = path.."layouts/floatingw.png"
 theme.layout_magnifier  = path.."layouts/magnifierw.png"
-theme.layout_tabs       = path.."layouts/tabs.png"
+theme.layout_tabular    = path.."layouts/tabular.png"
 theme.layout_static     = path.."layouts/spiralw.png"
 theme.layout_max        = path.."layouts/maxw.png"
 theme.layout_fullscreen = path.."layouts/fullscreenw.png"
@@ -184,12 +201,31 @@ theme.layout_tiletop    = path.."layouts/tiletopw.png"
 theme.layout_spiral     = path.."layouts/spiralw.png"
 theme.layout_dwindle    = path.."layouts/dwindlew.png"
 
+theme.kbd =
+{
+    us = path.."/kbd/us.png",
+    ru = path.."/kbd/ru.png",
+}
+
 theme.awesome_icon = "/usr/share/awesome/icons/awesome16.png"
 
 theme.infobox_bg = "#000000"
 
 theme.dialog_ok     = path.."dialog/ok.png"
 theme.dialog_cancel = path.."dialog/cancel.png"
+
+theme.dirs = {}
+
+theme.dirs.naughty_icons = {
+    path..'naughty/',
+    "/usr/share/pixmaps/",
+    "/usr/share/icons/gnome/16x16/status/",
+}
+
+theme.dirs.tags = path..'tags/'
+theme.dirs.weather = path..'weather/'
+
+theme.icon_theme = 'gnome'
 
 return theme
 -- vim: filetype=lua:foldmethod=marker

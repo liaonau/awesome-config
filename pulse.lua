@@ -5,9 +5,9 @@ local ipairs    = ipairs
 local pairs     = pairs
 local type      = type
 
-local cosy     = require("cosy")
 local beautiful = require("beautiful")
 local awful     = require("awful")
+local wibox     = require("wibox")
 
 local string    = string
 local math      = math
@@ -17,7 +17,7 @@ local pulse = {}
 
 pulse.step = 3
 
-local function get_sink_image (i, state)
+local function get_sink_image(i, state)
     local wv = beautiful.wibox.volume
     if (type(wv[i]) == "table") then
         if (wv[i][state]) then return wv[i][state] end
@@ -27,17 +27,17 @@ local function get_sink_image (i, state)
 end
 
 local function create_sink_widget(i)
-    local wt = cosy.widget.txt()
-    local wi = cosy.widget.img()
+    local wt = wibox.widget.textbox()
+    local wi = wibox.widget.imagebox()
     wi.image = get_sink_image(i, "volume")
 
     local volume_control = awful.util.table.join(
         awful.button({ }, 1, function()
-            awful.util.spawn("killall pavucontrol")
+            --awful.util.spawn("killall pavucontrol")
             awful.util.spawn("pavucontrol -t 3")
         end),
         awful.button({ }, 2, function()
-            awful.util.spawn("pa_switch")
+            awful.util.spawn("pa_toggle")
         end),
         awful.button({ }, 3, function()
             local sink = pa:get_sinks()[i]
@@ -73,7 +73,7 @@ function pulse.update_sinks(w, f)
        if (sinks[i]) then
           w[i].textbox.visible  = true
           w[i].imagebox.visible = true
-          w[i].textbox.text = f(sinks[i].volume)
+          w[i].textbox.markup = f(sinks[i].volume)
           if (sinks[i].mute ~= nil) then
              if (sinks[i].mute) then
                 if (sinks[i].default) then
@@ -115,13 +115,13 @@ local function choose_input(s)
 end
 
 local function create_sink_input_widget(s)
-    local wt = cosy.widget.txt()
-    local wi = cosy.widget.img()
+    local wt = wibox.widget.textbox()
+    local wi = wibox.widget.imagebox()
     wi.image = beautiful.wibox.volume.clients[s]
 
     local volume_control = awful.util.table.join(
         awful.button({ }, 1, function()
-            awful.util.spawn("killall pavucontrol")
+            --awful.util.spawn("killall pavucontrol")
             awful.util.spawn("pavucontrol -t 1")
         end),
         awful.button({ }, 3, function()
@@ -161,9 +161,9 @@ function pulse.update_inputs(w, f)
                 was = true
                 widget.imagebox.visible = true
                 widget.textbox.visible  = true
-                widget.textbox.text = f(p.volume)
+                widget.textbox.markup = f(p.volume)
                 if (p.mute) then
-                    widget.textbox.text = f('∅')
+                    widget.textbox.markup = f('∅')
                 end
             end
         end
