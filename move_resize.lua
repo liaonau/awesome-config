@@ -3,8 +3,6 @@ local wibox     = require("wibox")
 local beautiful = require("beautiful")
 local awful     = require("awful")
 
-local naughty   = require("naughty")
-
 local mr = {}
 mr.move_resize_step = 35
 
@@ -162,7 +160,6 @@ mr.callback = function(c, in_mods, in_key)
     local grabber
     grabber = awful.keygrabber.run(
     function(mod, key, event)
-        naughty.notify({icon='info',title=key,text=event})
         if event == "release" then
             if (key == "Super_L") then
                 mr.mod_box.visible = false

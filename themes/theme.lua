@@ -162,9 +162,7 @@ theme.wibox.volume = {
     clients =
     {
         ["Music Player Daemon"]             = wb.."volume/clients/music.png",
-        ["MPlayer"]                         = wb.."volume/clients/mplayer.png",
-        ["mplayer2"]                        = wb.."volume/clients/mplayer2.png",
-        ["mpv Media Player"]                = wb.."volume/clients/mplayer2.png",
+        ["mpv Media Player"]                = wb.."volume/clients/mpv.png",
         ["ALSA plug-in [plugin-container]"] = wb.."volume/clients/ff.png",
         ["radiotray"]                       = wb.."volume/clients/radiotray.png",
         ["qemu-system-x86_64"]              = wb.."volume/clients/qemu.png",
@@ -180,17 +178,17 @@ theme.wibox.usb         = wb.."usb.png"
 theme.wibox.cdrom       = wb.."cdrom.png"
 theme.wibox.log         = wb.."logview.png"
 theme.wibox.dict        = wb.."dict.png"
-theme.wibox.rem         = wb.."remind.png"
+theme.wibox.remind      = wb.."remind.png"
 
-theme.wallpaper = path.."wallpaper/earthwater.jpg"
---theme.wallpaper = path.."wallpaper/youbeta.jpg"
+--theme.wallpaper = path.."wallpaper/earthwater.jpg"
+theme.wallpaper = path.."wallpaper/youbeta.jpg"
 
 -- You can use your own layout icons like this:
 theme.layout_fairh      = path.."layouts/fairhw.png"
 theme.layout_fairv      = path.."layouts/fairvw.png"
 theme.layout_floating   = path.."layouts/floatingw.png"
 theme.layout_magnifier  = path.."layouts/magnifierw.png"
-theme.layout_tabular    = path.."layouts/tabular.png"
+theme.layout_tabular    = path.."layouts/tabular.svg"
 theme.layout_static     = path.."layouts/spiralw.png"
 theme.layout_max        = path.."layouts/maxw.png"
 theme.layout_fullscreen = path.."layouts/fullscreenw.png"
@@ -216,11 +214,16 @@ theme.dialog_cancel = path.."dialog/cancel.png"
 
 theme.dirs = {}
 
+local icon_size = 32
 theme.dirs.naughty_icons = {
     path..'naughty/',
     "/usr/share/pixmaps/",
-    "/usr/share/icons/gnome/16x16/status/",
 }
+local idirs = {"actions", "animations", "apps", "categories", "devices", "emblems", "emotes", "mimetypes", "places", "status", "stock"}
+for _, d in ipairs(idirs) do
+    table.insert(theme.dirs.naughty_icons, '/usr/share/icons/gnome/'..icon_size..'x'..icon_size..'/'..d..'/')
+    table.insert(theme.dirs.naughty_icons, '/usr/share/icons/Faenza/'..d..'/'..icon_size..'/')
+end
 
 theme.dirs.tags = path..'tags/'
 theme.dirs.weather = path..'weather/'

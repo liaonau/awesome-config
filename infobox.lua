@@ -51,7 +51,7 @@ local function new(updater, state, icon, title, text)
         local sg     = screen[1].geometry
         local sw, sh = sg.width, sg.height - ib.mwh
 
-        -- {dpi = 96} - грязный хак, чтобы не разбираться с идиотскими lgi cairo.Context
+        -- {dpi = 96} - грязный хак, чтобы не разбираться с lgi cairo.Context
         local dpi = 96
         local w1, h1 = ib.text:fit( {dpi = dpi}, sw, -1)
         local w2, h2 = ib.title:fit({dpi = dpi}, sw, -1)

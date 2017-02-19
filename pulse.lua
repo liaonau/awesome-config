@@ -8,6 +8,7 @@ local type      = type
 local beautiful = require("beautiful")
 local awful     = require("awful")
 local wibox     = require("wibox")
+local versed    = require('versed')
 
 local string    = string
 local math      = math
@@ -17,92 +18,77 @@ local pulse = {}
 
 pulse.step = 3
 
-local function get_sink_image(i, state)
+local function get_sink_image(v, state)
     local wv = beautiful.wibox.volume
-    if (type(wv[i]) == "table") then
-        if (wv[i][state]) then return wv[i][state] end
+    if (type(wv[v]) == "table") then
+        if (wv[v][state]) then return wv[v][state] end
     else
         return wv[state]
     end
 end
 
-local function create_sink_widget(i)
-    local wt = wibox.widget.textbox()
-    local wi = wibox.widget.imagebox()
-    wi.image = get_sink_image(i, "volume")
-
-    local volume_control = awful.util.table.join(
-        awful.button({ }, 1, function()
-            --awful.util.spawn("killall pavucontrol")
-            awful.util.spawn("pavucontrol -t 3")
-        end),
-        awful.button({ }, 2, function()
-            awful.util.spawn("pa_toggle")
-        end),
-        awful.button({ }, 3, function()
-            local sink = pa:get_sinks()[i]
-            pa:set_sink_volume(sink.index, {mute = not sink.mute})
-        end),
-        awful.button({ }, 4, function()
-            local sink = pa:get_sinks()[i]
-            pa:set_sink_volume(sink.index, {volume = sink.volume + pulse.step})
-        end),
-        awful.button({ }, 5, function()
-            local sink = pa:get_sinks()[i]
-            pa:set_sink_volume(sink.index, {volume = sink.volume - pulse.step})
-        end)
-    )
-    wt:buttons(volume_control)
-    wi:buttons(volume_control)
-
-    return { textbox = wt, imagebox = wi, pa_index = i }
-end
-
-function pulse.sinks(...)
-    local widgets = {}
-    for _, k in pairs(...) do
-        widgets[k] = create_sink_widget(k)
-    end
-    return widgets
-end
-
-function pulse.update_sinks(w, f)
-    local sinks = pa:get_sinks()
-    local wi = beautiful.wibox.volume
-    for i, p in pairs(w) do
-       if (sinks[i]) then
-          w[i].textbox.visible  = true
-          w[i].imagebox.visible = true
-          w[i].textbox.markup = f(sinks[i].volume)
-          if (sinks[i].mute ~= nil) then
-             if (sinks[i].mute) then
-                if (sinks[i].default) then
-                   -- приглушена, активна
-                   w[i].imagebox.image = get_sink_image(i, "mute")
-                else
-                   -- приглушена, неактивна
-                   w[i].imagebox.image = get_sink_image(i, "mutedim")
-                end
-             else
-                if (sinks[i].default) then
-                   -- включена, активна
-                   w[i].imagebox.image = get_sink_image(i, "volume")
-                else
-                   -- включена, неактивна
-                   w[i].imagebox.image = get_sink_image(i, "dim")
-                end
-             end
-          else
-             w[i].imagebox.image = nil
-          end
-       else
-          w[i].textbox.visible  = false
-          w[i].imagebox.visible = false
-       end
+local function decide_mute_default_image(mute, default)
+    if (mute) then
+        if (default) then
+            return 'mute'
+        else
+             return "mutedim"
+        end
+    else
+        if (default) then
+            return "volume"
+        else
+            return "dim"
+        end
     end
 end
 
+local function create_sink_widget(v, format_function)
+    return versed(
+    {
+        widgets =
+        {
+            wibox.widget.imagebox(),
+            wibox.widget.textbox(),
+        },
 
+        init = function(w, i)
+            w[1].image = get_sink_image(v, decide_mute_default_image(false, true))
+            i.name = v
+        end,
+
+        update = function(w, i)
+            local sinks = i.objects or pa:get_sinks()
+            local sink = sinks[v]
+            i.objects = nil
+            if (sink) then
+                w[2].markup = format_function(sink.volume)
+                local icon  = decide_mute_default_image(sink.mute, sink.default)
+                w[1].image  = get_sink_image(v, icon)
+                i.show()
+            else
+                i.hide()
+            end
+        end,
+
+        buttons = awful.util.table.join(
+            awful.button({ }, 1, function() awful.util.spawn("pavucontrol -t 3") end),
+            awful.button({ }, 2, function() awful.util.spawn("pa_toggle") end),
+            awful.button({ }, 3, function()
+                local sink = pa:get_sinks()[v]
+                pa:set_sink_volume(sink.index, {mute = not sink.mute})
+            end),
+            awful.button({ }, 4, function()
+                local sink = pa:get_sinks()[v]
+                pa:set_sink_volume(sink.index, {volume = sink.volume + pulse.step})
+            end),
+            awful.button({ }, 5, function()
+                local sink = pa:get_sinks()[v]
+                pa:set_sink_volume(sink.index, {volume = sink.volume - pulse.step})
+            end)
+        )
+    })
+end
 
 local function choose_input(s)
     local inputs = pa:get_sink_inputs()
@@ -111,67 +97,88 @@ local function choose_input(s)
             return k, v
         end
     end
-    return nil, nil
 end
 
-local function create_sink_input_widget(s)
-    local wt = wibox.widget.textbox()
-    local wi = wibox.widget.imagebox()
-    wi.image = beautiful.wibox.volume.clients[s]
+local function create_sink_input_widget(v, format_function)
+    return versed(
+    {
+        widgets =
+        {
+            wibox.widget.imagebox(),
+            wibox.widget.textbox(),
+        },
 
-    local volume_control = awful.util.table.join(
-        awful.button({ }, 1, function()
-            --awful.util.spawn("killall pavucontrol")
-            awful.util.spawn("pavucontrol -t 1")
-        end),
-        awful.button({ }, 3, function()
-            local index, input = choose_input(s)
-            pa:set_sink_input_volume(index, {mute = not input.mute})
-        end),
-        awful.button({ }, 4, function()
-            local index, input = choose_input(s)
-            pa:set_sink_input_volume(index, {volume = input.volume + pulse.step})
-        end),
-        awful.button({ }, 5, function()
-            local index, input = choose_input(s)
-            pa:set_sink_input_volume(index, {volume = input.volume - pulse.step})
-        end)
-    )
-    wt:buttons(volume_control)
-    wi:buttons(volume_control)
+        init = function(w, i)
+            w[1].image = beautiful.wibox.volume.clients[v]
+            i.name = v
+        end,
 
-    return { textbox = wt, imagebox = wi}
+        update = function(w, i)
+            local inputs = i.objects or pa:get_sink_inputs()
+            local input = nil
+            for _, t in pairs(inputs) do
+                if (t.name == v) then
+                    input = t
+                    break
+                end
+            end
+            i.objects = nil
+            if (input) then
+                w[2].markup = format_function(input.volume)
+                if (input.mute) then
+                    w[2].markup = format_function('∅')
+                end
+                i.show()
+            else
+                i.hide()
+            end
+        end,
+
+        buttons = awful.util.table.join(
+            awful.button({ }, 1, function() awful.util.spawn("pavucontrol -t 1") end),
+            awful.button({ }, 3, function()
+                local index, input = choose_input(v)
+                if (index and input) then
+                    pa:set_sink_input_volume(index, {mute = not input.mute})
+                end
+            end),
+            awful.button({ }, 4, function()
+                local index, input = choose_input(v)
+                if (index and input) then
+                    pa:set_sink_input_volume(index, {volume = input.volume + pulse.step})
+                end
+            end),
+            awful.button({ }, 5, function()
+                local index, input = choose_input(v)
+                if (index and input) then
+                    pa:set_sink_input_volume(index, {volume = input.volume - pulse.step})
+                end
+            end)
+        )
+    })
 end
 
-function pulse.inputs(...)
+local function create_widgets(tab, format_function, callback)
     local widgets = {}
-    for _, k in ipairs(...) do
-        widgets[k] = create_sink_input_widget(k)
+    local format_function = format_function or function(s) return s end
+    for k, v in pairs(tab) do
+        widgets[k] = callback(v, format_function)
     end
     return widgets
 end
 
-function pulse.update_inputs(w, f)
-    local inputs = pa:get_sink_inputs()
-
-    for name, widget in pairs(w) do
-        local was = false
-        for i, p in pairs(inputs) do
-            if (name == p.name and not was) then
-                was = true
-                widget.imagebox.visible = true
-                widget.textbox.visible  = true
-                widget.textbox.markup = f(p.volume)
-                if (p.mute) then
-                    widget.textbox.markup = f('∅')
-                end
-            end
-        end
-        if (not was) then
-            widget.imagebox.visible = false
-            widget.textbox.visible  = false
-        end
+local function update_widgets(w, callback)
+    local objects = callback()
+    for i, p in pairs(w) do
+        p.objects = objects
+        p.update()
     end
 end
+
+function pulse.sinks( tab, format_function) return create_widgets(tab, format_function, create_sink_widget)       end
+function pulse.inputs(tab, format_function) return create_widgets(tab, format_function, create_sink_input_widget) end
+
+function pulse.update_sinks(w)  update_widgets(w, function() return pa:get_sinks()       end) end
+function pulse.update_inputs(w) update_widgets(w, function() return pa:get_sink_inputs() end) end
 
 return pulse

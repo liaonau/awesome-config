@@ -1,8 +1,11 @@
 -- прогноз погоды с OpenWeatherMap
-local json = require("cjson")
-local math = require("math")
+local json  = require("cjson")
+local math  = require("math")
+local awful = require("awful")
 
 local meteo = {}
+
+meteo.lag = 7200
 
 local function round(num, pow)
     local p = 10^(pow or 0)
@@ -27,26 +30,31 @@ local function get_entry(entry)
     return moment
 end
 
-local function read_file(file)
-    local f = io.open(file)
-    local r = f:read("*a")
-    f:close()
-    return r
-end
-
-meteo.weather = function(file)
-    local weather_str = read_file(file)
-    local weather = get_entry(json.decode(weather_str))
+local function get_weather(str)
+    local weather = get_entry(json.decode(str))
     return weather
 end
 
-meteo.forecast = function(file)
-    local forecast_str = read_file(file)
+local function get_forecast(str)
     local forecast = {}
-    for k, v in pairs(json.decode(forecast_str)["list"]) do
+    for k, v in pairs(json.decode(str)["list"]) do
         table.insert(forecast, get_entry(v))
     end
     return forecast
 end
+
+local function get_with_callback(file, callback, fn)
+    awful.spawn.easy_async('cat '..file,
+    function(s, e, reason, code)
+        local result
+        if (code == 0 and reason == 'exit') then
+            pcall(function() result = fn(s) end)
+        end
+        callback(result)
+    end)
+end
+
+meteo.weather  = function(file, callback) get_with_callback(file, callback, get_weather)  end
+meteo.forecast = function(file, callback) get_with_callback(file, callback, get_forecast) end
 
 return meteo
