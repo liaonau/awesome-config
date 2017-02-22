@@ -9,7 +9,7 @@ local awful = require("awful")
 local setmetatable = setmetatable
 local type = type
 local rawset = rawset
-local path = awful.util.getdir("config").."/themes/"
+local path = awful.util.getdir("config").."themes/"
 local wb   = path..'wibox/'
 
 theme.main_wibox_height = "40"

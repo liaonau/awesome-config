@@ -1,4 +1,3 @@
---local capi      = { client = client, screen = screen, }
 local capi      = { client = client, screen = screen, }
 local client    = require("awful.client")
 local common    = require("awful.widget.common")
@@ -71,16 +70,16 @@ end
 tabular.layout = {}
 tabular.layout.name = "tabular"
 tabular.layout.arrange = function(p)
-    local area   = p.workarea
-    local cls    = p.clients
-    local focus  = p.focus or capi.client.focus
+    local area  = p.workarea
+    local cls   = p.clients
+    local focus = p.focus or capi.client.focus
     local fidx
 
     if focus and focus.screen ~= p.screen then focus = nil end
 
     if (not focus or focus.floating) and #cls > 0 then
         focus = cls[1]
-        fidx = 1
+        fidx  = 1
     end
 
     if not focus then return end

@@ -72,6 +72,8 @@ local function new(args)
         __index = function(t, k)
             if (k == 'need') then
                 return __need
+            elseif (k == 'versed') then
+                return true
             else
                 return rawget(t, k)
             end

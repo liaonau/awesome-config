@@ -1,32 +1,33 @@
-io.stderr:write("Starting Awesome WM\n")
+io.stderr:write(os.date("%Y-%m-%d %T W: ") .. "Starting Awesome WM\n")
 os.setlocale(os.getenv("LANG"))
 -- {{{ imports
-awful      = require("awful")
-naughty    = require("naughty")
-pulse      = require("pulse")
+awful      = require('awful')
+naughty    = require('naughty')
+pulse      = require('pulse')
 
 local awful      = awful
 local naughty    = naughty
 local pulse      = pulse
 
-local lgi         = require("lgi")
-local lpeg        = require("lpeg")
-local beautiful   = require("beautiful")
-local gears       = require("gears")
-local wibox       = require("wibox")
-local tyrannical  = require("tyrannical")
-local menubar     = require("menubar")
-local meteo       = require("meteo")
-local makeup      = require("makeup")
-local infobox     = require("infobox")
-local tabular     = require("tabular")
-local freedesktop = require('freedesktop')
-local autofocus   = require("awful.autofocus")
-local move_resize = require("move_resize")
-local versed      = require("versed")
+local lgi           = require('lgi')
+local lpeg          = require('lpeg')
+local beautiful     = require('beautiful')
+local gears         = require('gears')
+local wibox         = require('wibox')
+local client        = require('client')
+local tyrannical    = require('tyrannical')
+local menubar       = require('menubar')
+local meteo         = require('meteo')
+local makeup        = require('makeup')
+local infobox       = require('infobox')
+local tabular       = require('tabular')
+local freedesktop   = require('freedesktop')
+local autofocus     = require('awful.autofocus')
+local move_resize   = require('move_resize')
+local versed        = require('versed')
 
 -- remote последним
-awful.remote = require("awful.remote")
+awful.remote = require('awful.remote')
 -- }}}
 -- {{{ variable definitions, auxillary functions
 modkey = "Mod4"
@@ -107,18 +108,6 @@ local function set_wallpaper(s)
     end
 end
 
-function xml_escape(text)
-    local xml_entities =
-    {
-        ["\""] = "&quot;",
-        ["&"]  = "&amp;",
-        ["'"]  = "&apos;",
-        ["<"]  = "&lt;",
-        [">"]  = "&gt;"
-    }
-    return text and text:gsub("[\"&'<>]", xml_entities)
-end
-
 awful.spawn.easy_async_with_shell = function(cmd, callback)
     return awful.spawn.easy_async({awful.util.shell, "-c", cmd or ""}, callback)
 end
@@ -154,6 +143,46 @@ read_file =
     end,
 }
 
+local function lookup_tag_by_name(s, n)
+    for k, v in ipairs(s.tags) do
+        if v.name == n then
+            return v
+        end
+    end
+end
+
+local function lookup_tyrannical_tag_by_name(name, callback)
+    for k, v in pairs(tags) do
+        if v.name == name then
+            callback(v)
+            break
+        end
+    end
+end
+
+local function reorder_tags(c, t)
+    local screen_tags = awful.screen.focused().tags
+    local new_tags    = {}
+    local keys        = {}
+    local overload    = 1
+    for i, t in pairs(screen_tags) do
+        local n   = t.name
+        local idx = tag_indexes[n]
+        if (not idx) then
+            idx = #screen_tags + overload
+            overload = overload + 1
+        end
+        table.insert(new_tags, idx, t)
+        table.insert(keys, idx)
+    end
+    table.sort(keys)
+    for k, v in pairs(keys) do
+        local tag = new_tags[v]
+        if (tag) then
+            tag.index = k
+        end
+    end
+end
 -- }}}
 -- {{{ menu
 menubar.utils.terminal = terminal
@@ -249,9 +278,9 @@ local function get_text_weather(weather)
         text = text..'\n'..
         makeup.m(weather.description)..'\n'..
         'температура, °C     '..makeup.m(string.format("%3s", weather.temp))..'\n'..
-        'давление, мм рт.ст. '..makeup.c(string.format(weather.pressure))..'\n'..
+        'давление, мм рт.ст. '..makeup.c(string.format("%3s", weather.pressure))..'\n'..
         'влажность, %        '..makeup.c(string.format("%3s", weather.humidity))..'\n'..
-        'ветер, м/с          '..makeup.c(string.format("%3s", weather.wind):gsub(',', '.'))..'\n'..
+        'ветер, м/с         '..makeup.c(string.format("%4s", weather.wind):gsub(',', '.'))..'\n'..
         'облачность, %       '..makeup.c(string.format("%3s", weather.clouds))..'\n'..
         '\n'
     end
@@ -297,9 +326,158 @@ end
 )
 -- }}}
 -- }}}
+--{{{ tyrannical
+tyrannical.settings.block_children_focus_stealing = true
+tyrannical.settings.group_children = true
+--tyrannical.settings.no_focus_stealing_out = true
+tyrannical.settings.default_layout = als.tabular
+--{{{ tyrannical tags
+tags =
+{
+    {
+        name      = "1",
+        icon      = "terminal.png",
+        class     = {"URxvt"},
+        init      = true,
+        volatile  = false,
+    },
+    {
+        name      = "2",
+        icon      = "ff.png",
+        class     = {"Firefox", "Google-chrome"},
+        spawn     = 'browser',
+        --spawn     = 'google-chrome-stable',
+    },
+    {
+        name      = "3",
+        icon      = "idea.png",
+        class     = {"jetbrains-idea"},
+    },
+    {
+        name      = "4",
+        icon      = "dict.png",
+        class     = {"GoldenDict"},
+        spawn     = 'dictionary',
+        --no_focus_stealing_in = true,
+    },
+    {
+        name      = "5",
+        icon      = "mpv.png",
+        class     = {"mpv", "Vlc", "Gupnp-av-cp", "plugin-container", "Sxiv", "Geeqie"},
+    },
+    {
+        name      = "6",
+        icon      = "deluge.png",
+        class     = {"Deluge"},
+        spawn     = 'deluge-gtk',
+    },
+    {
+        name      = "7",
+        icon      = "audio.png",
+        class     = {"cantata"},
+        spawn     = 'cantata',
+    },
+    {
+        name      = "8",
+        icon      = "vim.png",
+        class     = {"Emacs", "Gvim"},
+    },
+    {
+        name      = "9",
+        icon      = "pride.png",
+        class     = {"Pride", "com.github.liaonau.Main"},
+    },
+    {
+        name      = "0",
+        icon      = "reader.png",
+        class     = {"Zathura", "Djview", "Evince", "Qpdfview", "fbreader"},
+    },
+    {
+        name      = "a",
+        icon      = "apps.png",
+        init      = true,
+        exclusive = false,
+        volatile  = false,
+        fallback  = true,
+    },
+    {
+        name      = "b",
+        icon      = "logview.png",
+        instance  = {"logTerminal"},
+        spawn     = terminal.." -cr black -rv -name logTerminal -e /bin/sh -c '/usr/bin/journalctl -b -n 39 -f | ccze -A -m ansi'",
+    },
+    {
+        name      = "c",
+        icon      = "terminal-aux.png",
+        instance  = {"urxvt-aux"},
+        spawn     = 'urxvt-aux',
+    },
+    {
+        name      = "g",
+        icon      = "openmw.png",
+        class     = {"Steam", "openmw"},
+    },
+    {
+        name      = "i",
+        icon      = "htop.png",
+        instance  = {"htopTerminal"},
+        spawn     = terminal.." -name htopTerminal -e htop",
+    },
+    {
+        name      = "o",
+        icon      = "oo.png",
+        class     = {"OpenOffice"},
+    },
+    {
+        name      = "p",
+        icon      = "im.png",
+        class     = {"Skype", "ViberPC", "Pidgin", "Telegram", "Xchat"},
+        spawn     = 'Viber',
+    },
+    {
+        name      = "q",
+        icon      = "gear.png",
+        class     = {"JavaFXSceneBuilder", "com-install4j-runtime", "Staruml", "com-mathworks-util-PostVMIni", "MATLAB"},
+    },
+    {
+        name      = "t",
+        icon      = "clock.png",
+        class     = {"Pavucontrol", "Parcellite", "Blueman-manager", "Nm-connection-editor"},
+        init      = true,
+        exclusive = false,
+        volatile  = false,
+    },
+    {
+        name      = "v",
+        icon      = "emul.png",
+        layout    = als.fair,
+        class     = {"Remote-viewer", "Xephyr"},
+    },
+}
+tag_indexes = {}
+
+for k, v in pairs(tags) do
+    tag_indexes[v.name] = k
+
+    if (v.icon) then
+        v.icon = beautiful.dirs.tags .. v.icon
+    end
+    v.screen = 1
+    if (v.init      == nil) then v.init      = false    end
+    if (v.volatile  == nil) then v.volatile  = true     end
+    if (v.exclusive == nil) then v.exclusive = true     end
+    if (v.key       == nil) then v.key       = v.name   end
+end
+
+tyrannical.tags = tags
+--}}}
+--tyrannical.properties.intrusive = { "pinentry", "gtksu", }
+--tyrannical.properties.floating  = { "pinentry", "gtksu", }
+--tyrannical.properties.ontop     = { "Xephyr", }
+--tyrannical.properties.placement = { kcalc = awful.placement.centered }
+--tyrannical.properties.size_hints_honor = { xterm = false, URxvt = false }
+--}}}
 -- {{{ wibar
-bar = {}
-bar.launcher = awful.widget.launcher({image = beautiful.awesome_icon, menu = mainmenu})
 -- {{{ tray
 tray                = wibox.container.constraint()
 tray.systray        = wibox.widget.systray()
@@ -320,6 +498,23 @@ end
 separator       = wibox.widget.imagebox()
 separator.image = beautiful.wibox.separator
 -- }}}
+--{{{ bar
+bar = {}
+bar.introspect = function()
+    local wids = {}
+    for k, v in pairs(bar) do
+        if (type(v) == 'table' and v.versed) then
+            table.insert(wids, tostring(k))
+        end
+    end
+    table.sort(wids)
+    table.insert(wids, '')
+    table.insert(wids, 'volume.inputs')
+    table.insert(wids, 'volume.sinks')
+    notify('bar', table.concat(wids, '\n'), 10, 'info')
+end
+bar.launcher = awful.widget.launcher({image = beautiful.awesome_icon, menu = mainmenu})
+--}}}
 --{{{ keyboard layout
 bar.keyboard_layout = versed(
 {
@@ -495,7 +690,7 @@ bar.mpd = versed(
             end
             local state = {}
             for k, v in string.gmatch(stdout, "([%w]+):[%s]([^\n]+)\n") do
-                state[k] = xml_escape(v)
+                state[k] = awful.util.escape(v)
             end
             if     state.state == "stop" then
                 w[1].image = beautiful.wibox.mpd.stop
@@ -535,18 +730,21 @@ bar.mpd = versed(
 })
 -- }}}
 -- {{{ память, диски
-bar.memomy = versed(
+bar.memory = versed(
 {
     widgets =
     {
         wibox.widget.imagebox(),
+        wibox.widget.textbox(),
+        wibox.widget.textbox(),
         wibox.widget.textbox(),
         wibox.widget.imagebox(),
     },
 
     init = function(w, i)
         w[1].image = beautiful.wibox.mem
-        w[3].image = beautiful.wibox.separator
+        w[3].text  = ' '
+        w[5].image = beautiful.wibox.separator
         i.for_each(function(w) w:connect_signal("mouse::leave", disksbox.hide) end)
     end,
 
@@ -573,11 +771,11 @@ bar.memomy = versed(
             m.swp.inuse = m.swp.t - m.swp.f
             m.swp.usep  = math.floor(m.swp.inuse / m.swp.t * 100)
 
-            local mem, swp = makeup.b(m.usep..'%'), ''
-            if (m.swp.usep ~= 0) then
-                swp = makeup.c(' '..m.swp.usep..'%')
-            end
-            w[2].markup = mem..swp
+            w[2].markup = makeup.b(m.usep..'%')
+            w[4].markup = makeup.c(m.swp.usep..'%')
+            local show_swp = (m.swp.usep ~= 0)
+            w[3].visible = show_swp
+            w[4].visible = show_swp
         end)
     end,
 
@@ -723,7 +921,7 @@ bar.remind = versed(
     update = function(w, i)
         read_file.Sync(awful.util.getdir('cache')..'remind',
         function(s)
-            local text = s and xml_escape(s:gsub("\n$", "")) or ''
+            local text = s and awful.util.escape(s:gsub("\n$", "")) or ''
             w[2].markup = makeup.r(text)
             i.set_visible(text ~= '')
         end)
@@ -919,7 +1117,7 @@ bar.netspeed = versed(
         end)
     end,
 
-    timeout = 1,
+    timeout = 5,
 })
 --}}}
 -- {{{ точка доступа
@@ -1104,7 +1302,7 @@ function(s)
                 separator,
                 bar.wifi(),
                 bar.netspeed(),
-                bar.memomy(),
+                bar.memory(),
                 bar.thermal_cpu(),
                 bar.thermal_hdd(),
                 bar.brightness(),
@@ -1139,154 +1337,6 @@ function(s)
 --}}}
 end)
 -- }}}
---{{{ tyrannical
-tyrannical.settings.block_children_focus_stealing = true
-tyrannical.settings.group_children = true
---tyrannical.settings.no_focus_stealing_out = true
-tyrannical.settings.default_layout = als.tabular
---{{{ tyrannical tags
-tags =
-{
-    {
-        name      = "1",
-        icon      = "terminal.png",
-        class     = {"URxvt"},
-        init      = true,
-        volatile  = false,
-    },
-    {
-        name      = "2",
-        icon      = "ff.png",
-        class     = {"Firefox", "Google-chrome"},
-        spawn     = 'browser',
-        --spawn     = 'google-chrome-stable',
-    },
-    {
-        name      = "3",
-        icon      = "idea.png",
-        class     = {"jetbrains-idea"},
-    },
-    {
-        name      = "4",
-        icon      = "dict.png",
-        class     = {"GoldenDict"},
-        spawn     = 'goldendict',
-        --no_focus_stealing_in = true,
-    },
-    {
-        name      = "5",
-        icon      = "mpv.png",
-        class     = {"mpv", "Vlc", "Gupnp-av-cp", "plugin-container", "Sxiv", "Geeqie"},
-    },
-    {
-        name      = "6",
-        icon      = "deluge.png",
-        class     = {"Deluge"},
-        spawn     = 'deluge-gtk',
-    },
-    {
-        name      = "7",
-        icon      = "audio.png",
-        class     = {"cantata"},
-        spawn     = 'cantata',
-    },
-    {
-        name      = "8",
-        icon      = "vim.png",
-        class     = {"Emacs", "Gvim"},
-    },
-    {
-        name      = "9",
-        icon      = "pride.png",
-        class     = {"Pride", "com.github.liaonau.Main"},
-    },
-    {
-        name      = "0",
-        icon      = "reader.png",
-        class     = {"Zathura", "Djview", "Evince", "Qpdfview", "fbreader"},
-    },
-    {
-        name      = "a",
-        icon      = "emul.png",
-        layout    = als.fair,
-        class     = {"Remote-viewer", "Xephyr"},
-    },
-    {
-        name      = "b",
-        icon      = "logview.png",
-        instance  = {"logTerminal"},
-        spawn     = terminal.." -cr black -rv -name logTerminal -e /bin/sh -c '/usr/bin/journalctl -b -n 39 -f | ccze -A -m ansi'",
-    },
-    {
-        name      = "c",
-        icon      = "terminal-aux.png",
-        instance  = {"urxvt-aux"},
-        spawn     = 'urxvt-aux',
-    },
-    {
-        name      = "g",
-        icon      = "openmw.png",
-        class     = {"Steam", "openmw"},
-    },
-    {
-        name      = "i",
-        icon      = "htop.png",
-        instance  = {"htopTerminal"},
-        spawn     = terminal.." -name htopTerminal -e htop",
-    },
-    {
-        name      = "o",
-        icon      = "oo.png",
-        class     = {"OpenOffice"},
-    },
-    {
-        name      = "p",
-        icon      = "im.png",
-        class     = {"Skype", "ViberPC", "Pidgin", "Telegram", "Xchat"},
-        spawn     = 'Viber',
-    },
-    {
-        name      = "q",
-        icon      = "gear.png",
-        class     = {"JavaFXSceneBuilder", "com-install4j-runtime", "Staruml", "com-mathworks-util-PostVMIni", "MATLAB"},
-    },
-    {
-        name      = "t",
-        icon      = "clock.png",
-        class     = {"Pavucontrol", "Parcellite", "Blueman-manager", "Nm-connection-editor"},
-        init      = true,
-        exclusive = false,
-        volatile  = false,
-    },
-    {
-        name      = "v",
-        icon      = "apps.png",
-        init      = true,
-        exclusive = false,
-        volatile  = false,
-        fallback  = true,
-    },
-}
-
-for k, v in pairs(tags) do
-    if (v.icon) then
-        v.icon = beautiful.dirs.tags .. v.icon
-    end
-    v.screen = 1
-    if (v.init      == nil) then v.init      = false    end
-    if (v.volatile  == nil) then v.volatile  = true     end
-    if (v.exclusive == nil) then v.exclusive = true     end
-    if (v.key       == nil) then v.key       = v.name   end
-end
-
-tyrannical.tags = tags
---}}}
---tyrannical.properties.intrusive = { "pinentry", "gtksu", }
---tyrannical.properties.floating = { "pinentry", "gtksu", }
---tyrannical.properties.ontop = { "Xephyr", }
---tyrannical.properties.placement = { kcalc = awful.placement.centered }
---tyrannical.properties.size_hints_honor = { xterm = false, URxvt = false }
---}}}
 -- {{{ global mouse bindings
 root.buttons(awful.util.table.join(
     awful.button({ }, 3, function() mainmenu:toggle() end),
@@ -1353,12 +1403,18 @@ globalkeys = awful.util.table.join(
     awful.key({ modkey, "Shift"   }, "BackSpace", function() awful.layout.inc(layouts, -1) end),
     awful.key({ modkey, "Control" }, "BackSpace",
     function()
-        local name = awful.tag.selected().name
-        --local layout = shifty.config.defaults.layout
-        --if (shifty.config.tags[name].layout) then
-            --layout = shifty.config.tags[name].layout
-        --end
-        --awful.layout.set(layout)
+        local tag = awful.screen.focused().selected_tag
+        if (tag) then
+            local name   = tag.name
+            local layout = tyrannical.settings.default_layout
+            lookup_tyrannical_tag_by_name(name,
+            function(v)
+                if (v.layout) then
+                    layout = v.layout
+                end
+            end)
+            awful.layout.set(layout)
+        end
     end),
     awful.key({ modkey,           }, "backslash",
     function()
@@ -1429,46 +1485,13 @@ globalkeys = awful.util.table.join(
     --function()
         --reminder!
     --end),
-    --awful.key({ modkey }, "z",
-    --function()
-        --local word = selection():gsub("^([^\n]*)\n.*", "%1"):gsub("^(%s+)", ""):gsub("<", "«"):gsub(">", "»")
-        --awful.spawn("goldendict '"..word.."'")
-    --end),
-    awful.key({ modkey }, "z",
-    function()
-        local info = networkmanager.get_ap_info('wlan0')
-        if (not info) then
-            notify('wlan0', 'NO AP!', 10, 'error')
-        end
-        local s = ''
-        for k, v in pairs(info) do
-            s = s..k..'='..tostring(v)..'\n'
-        end
-        notify('wlan0', s, 10, 'nm-device-wireless')
-    end),
+    awful.key({ modkey,           }, "z", datebox.toggle ),
     awful.key({ modkey, "Control" }, "z", meteobox.toggle),
     awful.key({ modkey, "Shift"   }, "z", disksbox.toggle)
 -- }}}
 )
 -- }}}
 --{{{ tags keys для tyrannical
-local function lookup_tag_by_name(s, n)
-    for k, v in ipairs(s.tags) do
-        if v.name == n then
-            return v
-        end
-    end
-end
-
-local function lookup_tyrannical_tag_by_name(name, callback)
-    for k, v in pairs(tags) do
-        if v.name == name then
-            callback(v)
-            break
-        end
-    end
-end
-
 local function tag_key(key, name)
     globalkeys = awful.util.table.join(
         globalkeys,
@@ -1718,11 +1741,9 @@ end)
 screen.connect_signal("property::geometry", set_wallpaper)
 awesome.connect_signal("xkb::group_changed", bar.keyboard_layout.update);
 
---local function reorder_tags(c)
-    --notify(c.class, '')
---end
---screen.connect_signal("client::tagged",   reorder_tags)
---screen.connect_signal("client::untagged", reorder_tags)
+client.connect_signal("tagged",   reorder_tags)
+client.connect_signal("untagged", reorder_tags)
+
 tabular.manage_reorder()
 -- }}}
 -- {{{ suspend/resume hook
@@ -1730,7 +1751,8 @@ function suspend_hook()
 end
 
 function resume_hook()
-    volume.update_all()
-    nm_update_widget()
+    bar.volume.update()
+    bar.wifi.update()
+    bar.weather.update()
 end
 -- }}}
