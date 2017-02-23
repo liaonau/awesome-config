@@ -857,21 +857,28 @@ bar.thermal_hdd = versed(
     {
         wibox.widget.imagebox(),
         wibox.widget.textbox(),
+        wibox.widget.textbox(),
+        wibox.widget.textbox(),
         wibox.widget.imagebox(),
     },
 
     init = function(w, i)
         w[1].image = beautiful.wibox.hdd
-        w[3].image = beautiful.wibox.separator
+        w[3].text  = ' '
+        w[5].image = beautiful.wibox.separator
         i.disks =
         {
             ['/dev/sda'] = {40, 45},
             ['/dev/sdb'] = {50, 55},
         }
+
+        i.disk_inactive = function(dev)
+            return (not dev or dev == 'SLP')
+        end
+
         i.color_makeup = function(dev, tab)
             local t = tab[dev]
-            if (t == nil) then
-                --t = makeup("#88ff88", '∅')
+            if i.disk_inactive(t) then
                 t = ''
             elseif ( t >= i.disks[dev][2] ) then
                 t = makeup("#ff8888", t..'°')
@@ -897,7 +904,12 @@ bar.thermal_hdd = versed(
 
             local ta = i.color_makeup('/dev/sda', tab, 40, 45)
             local tb = i.color_makeup('/dev/sdb', tab, 50, 55)
-            w[2].markup = ta..' '..tb
+            w[3].text = ' '
+            if i.disk_inactive('/dev/sdb') then
+                w[3].text = ''
+            end
+            w[2].markup = ta
+            w[4].markup = tb
         end)
     end,
 
